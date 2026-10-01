@@ -1,148 +1,418 @@
-"use client"
+"use client";
 
-import { useEffect, useState, type KeyboardEvent } from "react"
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  CalendarDays,
+  Hash,
+  ImageOff,
+  Layers3,
+  ListChecks,
+  Palette,
+  Tag,
+  AlignLeft,
+} from "lucide-react";
 
-import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
-import type { Product } from "@/components/custom/product/product-data"
+} from "@/components/ui/sheet";
+import type { Product } from "@/components/custom/product/product-data";
 
 type ViewProductSheetProps = {
-  product: Product | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onUpdate: (productId: Product["id"], updates: Partial<Product>) => void
-}
-
-type EditableField = "sku" | "name" | "category" | "brand" | "price" | "stock" | "imageName" | "description"
+  product: Product | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
 
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
   currency: "LKR",
-  maximumFractionDigits: 0,
-})
+  maximumFractionDigits: 2,
+});
 
-export function ViewProductSheet({ product, open, onOpenChange, onUpdate }: ViewProductSheetProps) {
-  const [editingField, setEditingField] = useState<EditableField | null>(null)
-  const [draft, setDraft] = useState("")
+const colorNames: Record<string, string> = {
+  "#000000": "Black",
+  "#FFFFFF": "White",
+  "#6B7280": "Gray",
+  "#C0C0C0": "Silver",
+  "#EF4444": "Red",
+  "#F97316": "Orange",
+  "#EAB308": "Yellow",
+  "#22C55E": "Green",
+  "#3B82F6": "Blue",
+  "#A855F7": "Purple",
+  "#EC4899": "Pink",
+  "#92400E": "Brown",
+  "#ED1C2E": "Red",
+};
+
+/* -------------------------------------------------------------------------- */
+/*                               Small UI helpers                             */
+/* -------------------------------------------------------------------------- */
+
+function Card({
+  icon: Icon,
+  title,
+  aside,
+  children,
+}: {
+  icon: typeof Tag;
+  title: string;
+  aside?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3.5 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon className="size-4 shrink-0 text-slate-500" aria-hidden="true" />
+          <h3 className="truncate text-[13px] font-semibold text-slate-900">
+            {title}
+          </h3>
+        </div>
+        {aside}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | null | undefined;
+}) {
+  if (value === null || value === undefined || value === "") return null;
+  return (
+    <div className="flex items-baseline justify-between gap-4 px-3.5 py-2.5">
+      <dt className="text-xs text-slate-500">{label}</dt>
+      <dd className="min-w-0 text-right text-sm font-medium break-words text-slate-900">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function stockTone(stock: number) {
+  if (stock <= 0) return "border-rose-200 bg-rose-50 text-rose-700";
+  if (stock <= 10) return "border-amber-200 bg-amber-50 text-amber-700";
+  return "border-emerald-200 bg-emerald-50 text-emerald-700";
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                  Component                                 */
+/* -------------------------------------------------------------------------- */
+
+export function ViewProductSheet({
+  product,
+  open,
+  onOpenChange,
+}: ViewProductSheetProps) {
+  const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
-    setEditingField(null)
-    setDraft("")
-  }, [product?.id, open])
+    setActiveImage(0);
+  }, [product?.id]);
 
-  function beginEdit(field: EditableField, value: string | number) {
-    setEditingField(field)
-    setDraft(String(value))
-  }
-
-  function cancelEdit() {
-    setEditingField(null)
-    setDraft("")
-  }
-
-  function saveEdit() {
-    if (!product || !editingField) return
-    const numericField = editingField === "price" || editingField === "stock"
-    const parsedValue = numericField ? Number(draft) : draft.trim()
-    if ((numericField && !Number.isFinite(parsedValue)) || (!numericField && !parsedValue)) {
-      cancelEdit()
-      return
-    }
-
-    onUpdate(product.id, { [editingField]: parsedValue } as Partial<Product>)
-    cancelEdit()
-  }
-
-  function handleInputKeyDown(event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault()
-      cancelEdit()
-    } else if (event.key === "Enter" && (event.currentTarget.tagName !== "TEXTAREA" || event.ctrlKey)) {
-      event.preventDefault()
-      saveEdit()
-    }
-  }
-
-  function renderValue(field: EditableField, label: string, value: string | number, displayValue = String(value)) {
-    const isEditing = editingField === field
-    const isDescription = field === "description"
-
-    return (
-      <div key={field} className="grid grid-cols-[minmax(88px,0.8fr)_minmax(0,1.2fr)] items-start gap-4 border-b border-slate-100 py-1.5 last:border-b-0 sm:gap-6">
-        <dt className="pt-1.5 text-xs font-semibold leading-5 text-slate-500">{label}</dt>
-        <dd className="min-w-0 text-right">
-          {isEditing ? (
-            isDescription ? (
-              <textarea
-                autoFocus
-                aria-label={`Edit ${label.toLowerCase()}`}
-                className="min-h-20 w-full resize-y rounded-sm border border-slate-300 bg-white px-2 py-1.5 text-right text-sm leading-5 text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30"
-                onBlur={saveEdit}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={handleInputKeyDown}
-                value={draft}
-              />
-            ) : (
-              <Input
-                autoFocus
-                aria-label={`Edit ${label.toLowerCase()}`}
-                className="h-8 rounded-sm border-slate-300 px-2 text-right text-sm leading-5 focus-visible:ring-[#ed1c2e]/30"
-                min={field === "price" || field === "stock" ? 0 : undefined}
-                onBlur={saveEdit}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={handleInputKeyDown}
-                step={field === "price" ? "0.01" : undefined}
-                type={field === "price" || field === "stock" ? "number" : "text"}
-                value={draft}
-              />
-            )
-          ) : (
-            <button
-              type="button"
-              onClick={() => beginEdit(field, value)}
-              className={`min-h-8 w-full rounded-sm px-2 py-1 text-right text-sm leading-5 text-slate-800 outline-none transition-colors hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 ${isDescription ? "break-words whitespace-pre-wrap" : "truncate"}`}
-              title="Click to edit"
-            >
-              {displayValue}
-            </button>
-          )}
-        </dd>
-      </div>
-    )
-  }
+  const images = product?.images ?? [];
+  const modelNumbers = (product?.modelNumber ?? "")
+    .split(",")
+    .map((modelNumber) => modelNumber.trim())
+    .filter(Boolean);
+  const priceTiers = product?.priceTiers ?? [];
+  const specifications = (product?.specifications ?? []).filter((item) =>
+    item.trim(),
+  );
+  const validColors = (product?.colors ?? [])
+    .map((color) => color.trim().toUpperCase())
+    .filter((color) => /^#[0-9A-F]{6}$/.test(color));
+  const currentImage = images[Math.min(activeImage, images.length - 1)];
+  const isBulk = product?.pricingType === "bulk";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-md">
-        <SheetHeader className="gap-1 border-b border-slate-200 px-5 py-5 pr-12 sm:px-6 sm:pr-14">
-          <SheetTitle className="line-clamp-2 text-lg font-semibold leading-6 text-slate-900">
+      <SheetContent
+        side="right"
+        className="flex h-dvh min-h-0 flex-col gap-0 overflow-hidden p-0 !w-screen sm:!max-w-md"
+      >
+        {/* ------------------------------- Header ------------------------------- */}
+        <SheetHeader className="shrink-0 gap-1.5 border-b border-slate-200 bg-white px-4 py-4 pr-12 sm:px-5 sm:pr-14">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className="rounded-sm border-rose-200 bg-rose-50 text-[10px] font-semibold tracking-wide text-rose-700 uppercase"
+            >
+              {isBulk ? "Bulk pricing" : "Fixed pricing"}
+            </Badge>
+            {product ? (
+              <Badge
+                variant="outline"
+                className={`rounded-sm text-[10px] font-semibold tracking-wide uppercase ${stockTone(product.stock)}`}
+              >
+                {product.stock <= 0
+                  ? "Out of stock"
+                  : `${product.stock} in stock`}
+              </Badge>
+            ) : null}
+          </div>
+          <SheetTitle className="line-clamp-2 text-lg leading-6 font-semibold text-slate-950 sm:text-xl sm:leading-7">
             {product?.name ?? "Product details"}
           </SheetTitle>
-          <SheetDescription className="flex items-center gap-2 text-xs leading-5">
-            <span className="font-medium uppercase text-slate-500">SKU</span>
-            <span className="font-mono tabular-nums text-slate-700">{product?.sku}</span>
-            <span className="ml-1 text-slate-500">Click a value to edit.</span>
+          <SheetDescription className="flex min-w-0 items-center gap-1.5 text-xs">
+            <Hash className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate font-mono text-slate-700">
+              {product?.sku}
+            </span>
           </SheetDescription>
         </SheetHeader>
-        {product && (
-          <dl className="divide-y divide-slate-100 overflow-y-auto px-5 py-2 sm:px-6">
-            {renderValue("sku", "SKU", product.sku)}
-            {renderValue("name", "Product", product.name)}
-            {renderValue("category", "Category", product.category)}
-            {renderValue("brand", "Brand", product.brand)}
-            {renderValue("price", "Price", product.price, currencyFormatter.format(product.price))}
-            {renderValue("stock", "Stock", product.stock)}
-            {renderValue("imageName", "Image", product.imageName)}
-            {renderValue("description", "Description", product.description)}
-          </dl>
-        )}
+
+        {/* -------------------------------- Body -------------------------------- */}
+        {product ? (
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50 px-4 py-4 sm:px-5">
+            {/* Gallery */}
+            <section aria-label="Product images" className="space-y-2">
+              <div className="relative aspect-[16/9] max-h-48 overflow-hidden rounded-lg border border-slate-200 bg-white">
+                {currentImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={currentImage}
+                    alt={`${product.name} image ${Math.min(activeImage, images.length - 1) + 1}`}
+                    className="size-full object-contain"
+                  />
+                ) : (
+                  <div className="grid size-full place-items-center text-slate-400">
+                    <span className="flex flex-col items-center gap-1.5 text-xs">
+                      <ImageOff className="size-6" aria-hidden="true" />
+                      No images
+                    </span>
+                  </div>
+                )}
+                {images.length > 1 ? (
+                  <span className="absolute right-2 bottom-2 rounded bg-slate-900/75 px-1.5 py-0.5 text-[11px] font-medium text-white tabular-nums">
+                    {Math.min(activeImage, images.length - 1) + 1} /{" "}
+                    {images.length}
+                  </span>
+                ) : null}
+              </div>
+
+              {images.length > 1 ? (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {images.map((image, index) => {
+                    const active = index === activeImage;
+                    return (
+                      <button
+                        key={`${image}-${index}`}
+                        type="button"
+                        aria-label={`Show image ${index + 1}`}
+                        aria-current={active}
+                        onClick={() => setActiveImage(index)}
+                        className={`relative size-14 shrink-0 overflow-hidden rounded-md border bg-white transition-colors focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 focus-visible:outline-none sm:size-16 ${
+                          active
+                            ? "border-[#ed1c2e] ring-1 ring-[#ed1c2e]/30"
+                            : "border-slate-200 opacity-80 hover:opacity-100"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={image}
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                        {index === 0 ? (
+                          <span className="absolute inset-x-0 bottom-0 bg-black/60 py-px text-center text-[9px] font-medium text-white">
+                            Cover
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+
+            {/* Pricing */}
+            <Card
+              icon={Layers3}
+              title="Pricing"
+              aside={
+                product.discountPercent ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-sm border-emerald-200 bg-emerald-50 text-[10px] font-semibold text-emerald-700"
+                  >
+                    {product.discountPercent}% discount
+                  </Badge>
+                ) : null
+              }
+            >
+              {isBulk ? (
+                <div>
+                  <div className="grid grid-cols-[1fr_1fr] gap-3 border-b border-slate-200 bg-white px-3.5 py-2 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+                    <span>Quantity range</span>
+                    <span className="text-right">Unit price</span>
+                  </div>
+                  {priceTiers.length ? (
+                    <div className="divide-y divide-slate-100">
+                      {priceTiers.map((tier, index) => (
+                        <div
+                          key={`${tier.startQty}-${tier.endQty}-${index}`}
+                          className="grid grid-cols-[1fr_1fr] gap-3 px-3.5 py-2.5 odd:bg-white even:bg-slate-50/70"
+                        >
+                          <span className="text-sm text-slate-700 tabular-nums">
+                            {tier.startQty} – {tier.endQty ?? "No limit"}
+                          </span>
+                          <span className="text-right text-sm font-semibold text-slate-900 tabular-nums">
+                            {currencyFormatter.format(tier.price)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-3.5 py-3 text-sm text-slate-500">
+                      No bulk price tiers available.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-end justify-between gap-3 px-3.5 py-3.5">
+                  <div>
+                    <p className="text-xs text-slate-500">Fixed unit price</p>
+                    <p className="mt-0.5 text-2xl font-semibold text-slate-950 tabular-nums">
+                      {currencyFormatter.format(
+                        product.fixedPrice ?? product.price,
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Product information */}
+            <Card icon={Tag} title="Product information">
+              <dl className="divide-y divide-slate-100">
+                <InfoRow label="Category" value={product.category} />
+                <InfoRow label="Brand" value={product.brand} />
+                <InfoRow label="Model" value={product.model} />
+                <InfoRow
+                  label="Manufactured year"
+                  value={product.manufacturedYear}
+                />
+              </dl>
+            </Card>
+
+            {/* Model numbers */}
+            {modelNumbers.length ? (
+              <Card
+                icon={Hash}
+                title="Model numbers"
+                aside={
+                  <span className="text-xs text-slate-500">
+                    {modelNumbers.length}
+                  </span>
+                }
+              >
+                <div className="flex flex-wrap gap-2 p-3.5">
+                  {modelNumbers.map((modelNumber, index) => (
+                    <span
+                      key={`${modelNumber}-${index}`}
+                      className="inline-flex max-w-full items-center rounded-md border border-slate-200 bg-white px-2.5 py-1.5 font-mono text-xs font-medium break-all text-slate-700"
+                    >
+                      {modelNumber}
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            ) : null}
+
+            {/* Colors */}
+            {validColors.length ? (
+              <Card
+                icon={Palette}
+                title="Available colors"
+                aside={
+                  <span className="text-xs text-slate-500">
+                    {validColors.length}
+                  </span>
+                }
+              >
+                <div className="flex flex-wrap gap-2 p-3.5">
+                  {validColors.map((color, index) => (
+                    <span
+                      key={`${color}-${index}`}
+                      title={color}
+                      className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
+                    >
+                      <span
+                        className="size-4 shrink-0 rounded-full border border-slate-300"
+                        style={{ backgroundColor: color }}
+                        aria-hidden="true"
+                      />
+                      {colorNames[color] ?? color}
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            ) : null}
+
+            {/* Description */}
+            {product.description?.trim() ? (
+              <Card icon={AlignLeft} title="Description">
+                <p className="p-3.5 text-sm leading-6 whitespace-pre-wrap text-slate-700">
+                  {product.description.trim()}
+                </p>
+              </Card>
+            ) : null}
+
+            {/* Specifications */}
+            {specifications.length ? (
+              <Card
+                icon={ListChecks}
+                title="Feature specifications"
+                aside={
+                  <span className="text-xs text-slate-500">
+                    {specifications.length}
+                  </span>
+                }
+              >
+                <ul className="divide-y divide-slate-100">
+                  {specifications.map((specification, index) => (
+                    <li
+                      key={`${specification}-${index}`}
+                      className="flex gap-2.5 px-3.5 py-2.5 text-sm leading-5 text-slate-700 odd:bg-white even:bg-slate-50/70"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#ed1c2e]"
+                      />
+                      <span className="min-w-0 break-words">
+                        {specification}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            ) : null}
+
+            {/* Created */}
+            {product.createdAt ? (
+              <p className="flex items-center gap-2 pt-1 text-xs text-slate-500">
+                <CalendarDays className="size-3.5" aria-hidden="true" />
+                Created{" "}
+                {new Date(product.createdAt).toLocaleString("en-LK", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </SheetContent>
     </Sheet>
-  )
+  );
 }

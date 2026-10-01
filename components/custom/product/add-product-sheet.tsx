@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useEffect, useState, type ReactNode } from "react"
-import { Controller, useFieldArray, useForm } from "react-hook-form"
-import { HexColorInput, HexColorPicker } from "react-colorful"
-import { ImagePlus, Layers, Palette, Plus, Tag, Trash2, X } from "lucide-react"
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { HexColorInput, HexColorPicker } from "react-colorful";
+import { ImagePlus, Layers, Palette, Plus, Tag, Trash2, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -22,49 +22,53 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
-import { fetchProductCatalogOptions, type NewProduct } from "@/lib/api/products"
+} from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  fetchProductCatalogOptions,
+  type NewProduct,
+} from "@/lib/api/products";
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
 /* -------------------------------------------------------------------------- */
 
-type PricingType = "fixed" | "bulk"
+type PricingType = "fixed" | "bulk";
 
-type ImageItem = { id: string; file: File; preview: string }
-type SpecItem = { value: string }
-type PriceTier = { startQty: number; endQty: string; price: string }
+type ImageItem = { id: string; file: File; preview: string };
+type ModelNumberItem = { value: string };
+type SpecItem = { value: string };
+type PriceTier = { startQty: number; endQty: string; price: string };
 
 export type ProductFormValues = {
-  name: string
-  modelNumber: string
-  model: string
-  category: string
-  brand: string
-  manufacturedYear: string
-  images: ImageItem[]
-  description: string
-  hasSpecs: boolean
-  specs: SpecItem[]
-  pricingType: PricingType
-  fixedPrice: string
-  priceTiers: PriceTier[]
-  colors: string[] // hex codes, e.g. ["#EF4444", "#1A2B3C"]
-}
+  name: string;
+  modelNumbers: ModelNumberItem[];
+  model: string;
+  category: string;
+  brand: string;
+  manufacturedYear: string;
+  images: ImageItem[];
+  description: string;
+  hasSpecs: boolean;
+  specs: SpecItem[];
+  pricingType: PricingType;
+  fixedPrice: string;
+  priceTiers: PriceTier[];
+  colors: string[]; // hex codes, e.g. ["#EF4444", "#1A2B3C"]
+};
 
 type AddProductSheetProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAdd: (product: NewProduct) => Promise<void>
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdd: (product: NewProduct) => Promise<void>;
+};
 
 /* -------------------------------------------------------------------------- */
 /*                                  Constants                                 */
 /* -------------------------------------------------------------------------- */
 
-const MAX_IMAGES = 8
+const MAX_IMAGES = 8;
 
 const PRESET_COLORS = [
   { name: "Black", hex: "#000000" },
@@ -79,11 +83,11 @@ const PRESET_COLORS = [
   { name: "Purple", hex: "#A855F7" },
   { name: "Pink", hex: "#EC4899" },
   { name: "Brown", hex: "#92400E" },
-]
+];
 
 const DEFAULT_VALUES: ProductFormValues = {
   name: "",
-  modelNumber: "",
+  modelNumbers: [{ value: "" }],
   model: "",
   category: "",
   brand: "",
@@ -96,14 +100,14 @@ const DEFAULT_VALUES: ProductFormValues = {
   fixedPrice: "",
   priceTiers: [{ startQty: 1, endQty: "", price: "" }],
   colors: [],
-}
+};
 
 const inputClass =
-  "h-10 rounded-md border-slate-200 px-3 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+  "h-10 rounded-md border-slate-200 px-3 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
 const textareaClass =
-  "min-h-20 resize-y rounded-md border-slate-200 px-3 py-2.5 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+  "min-h-20 resize-y rounded-md border-slate-200 px-3 py-2.5 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
 
-const sameHex = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+const sameHex = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 /* -------------------------------------------------------------------------- */
 /*                               Small UI helpers                             */
@@ -115,10 +119,10 @@ function Section({
   action,
   children,
 }: {
-  title: string
-  description?: string
-  action?: ReactNode
-  children: ReactNode
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="space-y-4 border-b border-slate-100 px-5 py-6 last:border-b-0 sm:px-6">
@@ -133,7 +137,7 @@ function Section({
       </div>
       {children}
     </section>
-  )
+  );
 }
 
 function Field({
@@ -143,11 +147,11 @@ function Field({
   error,
   children,
 }: {
-  label: string
-  htmlFor?: string
-  optional?: boolean
-  error?: string
-  children: ReactNode
+  label: string;
+  htmlFor?: string;
+  optional?: boolean;
+  error?: string;
+  children: ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
@@ -163,7 +167,7 @@ function Field({
       {children}
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
-  )
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -184,7 +188,7 @@ export function AddProductSheet({
     setValue,
     getValues,
     formState: { errors },
-  } = useForm<ProductFormValues>({ defaultValues: DEFAULT_VALUES })
+  } = useForm<ProductFormValues>({ defaultValues: DEFAULT_VALUES });
 
   const {
     fields: imageFields,
@@ -196,95 +200,107 @@ export function AddProductSheet({
     rules: {
       minLength: { value: 1, message: "Add at least one product image" },
     },
-  })
+  });
 
   const {
     fields: specFields,
     append: appendSpec,
     remove: removeSpec,
-  } = useFieldArray({ control, name: "specs" })
+  } = useFieldArray({ control, name: "specs" });
+
+  const {
+    fields: modelNumberFields,
+    append: appendModelNumber,
+    remove: removeModelNumber,
+  } = useFieldArray({
+    control,
+    name: "modelNumbers",
+    rules: { minLength: { value: 1, message: "Add a model number" } },
+  });
 
   const {
     fields: tierFields,
     append: appendTier,
     remove: removeTier,
-  } = useFieldArray({ control, name: "priceTiers" })
+  } = useFieldArray({ control, name: "priceTiers" });
 
-  const hasSpecs = watch("hasSpecs")
-  const pricingType = watch("pricingType")
-  const tiers = watch("priceTiers")
-  const colors = watch("colors")
+  const hasSpecs = watch("hasSpecs");
+  const pricingType = watch("pricingType");
+  const tiers = watch("priceTiers");
+  const colors = watch("colors");
 
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [pickerColor, setPickerColor] = useState("#ed1c2e")
-  const [productCategories, setProductCategories] = useState<string[]>([])
-  const [productBrands, setProductBrands] = useState<string[]>([])
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false)
-  const [catalogError, setCatalogError] = useState("")
-  const [formError, setFormError] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [toastMessage, setToastMessage] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerColor, setPickerColor] = useState("#ed1c2e");
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [productBrands, setProductBrands] = useState<string[]>([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    setIsLoadingCatalog(true)
-    setCatalogError("")
+    if (!open) return;
+    let cancelled = false;
+    setIsLoadingCatalog(true);
+    setCatalogError("");
     void fetchProductCatalogOptions()
       .then((catalog) => {
-        if (cancelled) return
-        setProductCategories(catalog.categories)
-        setProductBrands(catalog.brands)
+        if (cancelled) return;
+        setProductCategories(catalog.categories);
+        setProductBrands(catalog.brands);
       })
       .catch((error: unknown) => {
         if (!cancelled) {
           setCatalogError(
             error instanceof Error
               ? error.message
-              : "Could not load product categories and brands."
-          )
+              : "Could not load product categories and brands.",
+          );
         }
       })
       .finally(() => {
-        if (!cancelled) setIsLoadingCatalog(false)
-      })
+        if (!cancelled) setIsLoadingCatalog(false);
+      });
     return () => {
-      cancelled = true
-    }
-  }, [open])
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
-    if (!toastMessage) return
-    const timeoutId = window.setTimeout(() => setToastMessage(""), 4000)
-    return () => window.clearTimeout(timeoutId)
-  }, [toastMessage])
+    if (!toastMessage) return;
+    const timeoutId = window.setTimeout(() => setToastMessage(""), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   /* Keep each tier's start quantity = previous tier's end quantity + 1 */
   useEffect(() => {
-    let nextStart = 1
+    let nextStart = 1;
     tiers.forEach((tier, index) => {
       if (Number(tier.startQty) !== nextStart) {
-        setValue(`priceTiers.${index}.startQty`, nextStart)
+        setValue(`priceTiers.${index}.startQty`, nextStart);
       }
-      const end = Number(tier.endQty)
-      nextStart = (end > 0 ? end : nextStart) + 1
-    })
-  }, [tiers, setValue])
+      const end = Number(tier.endQty);
+      nextStart = (end > 0 ? end : nextStart) + 1;
+    });
+  }, [tiers, setValue]);
 
   /* ------------------------------ Image handling ----------------------------- */
 
   function revokeAllPreviews() {
-    getValues("images").forEach((item) => URL.revokeObjectURL(item.preview))
+    getValues("images").forEach((item) => URL.revokeObjectURL(item.preview));
   }
 
   useEffect(() => {
-    return () => revokeAllPreviews()
+    return () => revokeAllPreviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   function handleFiles(files: FileList | null) {
-    if (!files) return
-    const remaining = MAX_IMAGES - getValues("images").length
+    if (!files) return;
+    const remaining = MAX_IMAGES - getValues("images").length;
     Array.from(files)
       .slice(0, remaining)
       .forEach((file) =>
@@ -292,20 +308,20 @@ export function AddProductSheet({
           id: crypto.randomUUID(),
           file,
           preview: URL.createObjectURL(file),
-        })
-      )
+        }),
+      );
   }
 
   function handleRemoveImage(index: number) {
-    URL.revokeObjectURL(getValues(`images.${index}.preview`))
-    removeImage(index)
+    URL.revokeObjectURL(getValues(`images.${index}.preview`));
+    removeImage(index);
   }
 
   /* ------------------------------- Spec handling ------------------------------ */
 
   function handleSpecToggle(checked: boolean) {
-    setValue("hasSpecs", checked)
-    if (checked && getValues("specs").length === 0) appendSpec({ value: "" })
+    setValue("hasSpecs", checked);
+    if (checked && getValues("specs").length === 0) appendSpec({ value: "" });
   }
 
   /* ------------------------------- Color handling ----------------------------- */
@@ -314,57 +330,64 @@ export function AddProductSheet({
     hex: string,
     checked: boolean,
     current: string[],
-    onChange: (v: string[]) => void
+    onChange: (v: string[]) => void,
   ) {
     if (checked) {
       if (!current.some((c) => sameHex(c, hex)))
-        onChange([...current, hex.toUpperCase()])
+        onChange([...current, hex.toUpperCase()]);
     } else {
-      onChange(current.filter((c) => !sameHex(c, hex)))
+      onChange(current.filter((c) => !sameHex(c, hex)));
     }
   }
 
   function addCustomColor(current: string[], onChange: (v: string[]) => void) {
-    const hex = pickerColor.startsWith("#") ? pickerColor : `#${pickerColor}`
+    const hex = pickerColor.startsWith("#") ? pickerColor : `#${pickerColor}`;
     if (!current.some((c) => sameHex(c, hex)))
-      onChange([...current, hex.toUpperCase()])
-    setPickerOpen(false)
+      onChange([...current, hex.toUpperCase()]);
+    setPickerOpen(false);
   }
 
   /* ------------------------------- Tier handling ------------------------------ */
 
-  const lastTier = tiers[tiers.length - 1]
+  const lastTier = tiers[tiers.length - 1];
   const canAddTier =
     !!lastTier &&
     Number(lastTier.endQty) >= Number(lastTier.startQty) &&
-    Number(lastTier.endQty) > 0
+    Number(lastTier.endQty) > 0;
 
   function handleAddTier() {
-    if (!canAddTier) return
-    appendTier({ startQty: Number(lastTier.endQty) + 1, endQty: "", price: "" })
+    if (!canAddTier) return;
+    appendTier({
+      startQty: Number(lastTier.endQty) + 1,
+      endQty: "",
+      price: "",
+    });
   }
 
   /* --------------------------------- Submit ---------------------------------- */
 
   function handleOpenChange(nextOpen: boolean) {
-    onOpenChange(nextOpen)
+    onOpenChange(nextOpen);
     if (!nextOpen) {
-      revokeAllPreviews()
-      reset(DEFAULT_VALUES)
-      setPickerOpen(false)
-      setFormError("")
+      revokeAllPreviews();
+      reset(DEFAULT_VALUES);
+      setPickerOpen(false);
+      setFormError("");
     }
   }
 
   async function onSubmit(values: ProductFormValues) {
-    const isFixed = values.pricingType === "fixed"
-    setIsSubmitting(true)
-    setFormError("")
-    setToastMessage("")
+    const isFixed = values.pricingType === "fixed";
+    setIsSubmitting(true);
+    setFormError("");
+    setToastMessage("");
     try {
       await onAdd({
         name: values.name.trim(),
-        modelNumber: values.modelNumber.trim(),
+        modelNumber: values.modelNumbers
+          .map((item) => item.value.trim())
+          .filter(Boolean)
+          .join(", "),
         model: values.model.trim() || undefined,
         category: values.category,
         brand: values.brand,
@@ -386,15 +409,17 @@ export function AddProductSheet({
               price: Number(tier.price),
             })),
         colors: values.colors,
-      })
-      setToastMessage("Product added successfully.")
-      handleOpenChange(false)
+      });
+      setToastMessage("Product added successfully.");
+      handleOpenChange(false);
     } catch (error) {
       setFormError(
-        error instanceof Error ? error.message : "Could not create the product."
-      )
+        error instanceof Error
+          ? error.message
+          : "Could not create the product.",
+      );
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -404,9 +429,9 @@ export function AddProductSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="min-h-0 !w-screen gap-0 overflow-hidden p-0 sm:!max-w-2xl"
+        className="flex h-dvh min-h-0 flex-col gap-0 overflow-hidden p-0 !w-screen sm:!max-w-2xl"
       >
-        <SheetHeader className="shrink-0 border-b border-slate-200 px-5 py-4 sm:px-6">
+        <SheetHeader className="shrink-0 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
           <SheetTitle className="text-base font-semibold text-slate-900">
             Add product
           </SheetTitle>
@@ -422,7 +447,7 @@ export function AddProductSheet({
         >
           {formError ? (
             <p
-              className="mx-5 mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:mx-6"
+              className="mx-5 mt-4 shrink-0 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:mx-6"
               role="alert"
             >
               {formError}
@@ -430,13 +455,13 @@ export function AddProductSheet({
           ) : null}
           {catalogError ? (
             <p
-              className="mx-5 mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:mx-6"
+              className="mx-5 mt-4 shrink-0 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:mx-6"
               role="alert"
             >
               {catalogError}
             </p>
           ) : null}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth">
             {/* ------------------------------ Basic info ------------------------------ */}
             <Section title="Basic information">
               <Field
@@ -458,27 +483,85 @@ export function AddProductSheet({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
                   label="Model number"
-                  htmlFor="product-model-number"
-                  error={errors.modelNumber?.message}
+                  htmlFor="product-model-number-0"
+                  error={errors.modelNumbers?.root?.message}
                 >
-                  <Input
-                    id="product-model-number"
-                    maxLength={60}
-                    placeholder="e.g. XR-2040"
-                    className={inputClass}
-                    {...register("modelNumber", {
-                      required: "Model number is required",
-                    })}
-                  />
+                  <div className="space-y-2">
+                    {modelNumberFields.map((item, index) => (
+                      <div key={item.id} className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <Input
+                            id={`product-model-number-${index}`}
+                            maxLength={60}
+                            placeholder={
+                              index === 0
+                                ? "e.g. XR-2040"
+                                : "Enter another model number"
+                            }
+                            className={inputClass}
+                            {...register(`modelNumbers.${index}.value`, {
+                              required: "Model number is required",
+                              maxLength: {
+                                value: 60,
+                                message:
+                                  "Model number must be 60 characters or fewer",
+                              },
+                            })}
+                          />
+                          {errors.modelNumbers?.[index]?.value?.message ? (
+                            <p
+                              className="mt-1 text-xs text-red-600"
+                              role="alert"
+                            >
+                              {errors.modelNumbers[index]?.value?.message}
+                            </p>
+                          ) : null}
+                        </div>
+                        {index === modelNumberFields.length - 1 ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label="Add another model number"
+                            onClick={() => appendModelNumber({ value: "" })}
+                            className="size-10 shrink-0"
+                          >
+                            <Plus className="size-4" aria-hidden="true" />
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label={`Remove model number ${index + 1}`}
+                            onClick={() => removeModelNumber(index)}
+                            className="size-10 shrink-0 text-slate-500 hover:text-[#ed1c2e]"
+                          >
+                            <X className="size-4" aria-hidden="true" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </Field>
                 <Field label="Model" htmlFor="product-model" optional>
                   <Input
                     id="product-model"
-                    maxLength={60}
+                    maxLength={7}
                     placeholder="Enter model"
                     className={inputClass}
-                    {...register("model")}
+                    {...register("model", {
+                      validate: (value) =>
+                        !value ||
+                        /^[A-Za-z0-9]{1,7}$/.test(value) ||
+                        "Use letters and numbers only, up to 7 characters.",
+                    })}
                   />
+                  {errors.model?.message ? (
+                    <span className="block text-xs text-rose-700">
+                      {errors.model.message}
+                    </span>
+                  ) : null}
                 </Field>
               </div>
 
@@ -622,28 +705,34 @@ export function AddProductSheet({
                 ))}
 
                 {imageFields.length < MAX_IMAGES ? (
-                  <label
-                    htmlFor="product-images"
-                    className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-300 bg-slate-50 text-slate-500 transition-colors hover:border-[#ed1c2e]/50 hover:bg-rose-50/40 hover:text-[#ed1c2e]"
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-300 bg-slate-50 text-slate-500 transition-colors hover:border-[#ed1c2e]/50 hover:bg-rose-50/40 hover:text-[#ed1c2e] focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 focus-visible:outline-none"
                   >
                     <ImagePlus className="size-5" aria-hidden="true" />
                     <span className="text-xs font-medium">
                       {imageFields.length === 0 ? "Add image" : "Add more"}
                     </span>
-                    <input
-                      id="product-images"
-                      type="file"
-                      multiple
-                      accept="image/png,image/jpeg,image/webp"
-                      className="sr-only"
-                      onChange={(event) => {
-                        handleFiles(event.target.files)
-                        event.target.value = ""
-                      }}
-                    />
-                  </label>
+                  </button>
                 ) : null}
               </div>
+
+              {/* display:none input — can't take focus, so the browser never
+                  scrolls the sheet when the file dialog opens or closes */}
+              <input
+                ref={fileInputRef}
+                id="product-images"
+                type="file"
+                multiple
+                hidden
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => {
+                  handleFiles(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+
               {errors.images?.root?.message ? (
                 <p className="text-xs text-red-600">
                   {errors.images.root.message}
@@ -767,7 +856,7 @@ export function AddProductSheet({
                         },
                       ] as const
                     ).map(({ value, label, hint, Icon }) => {
-                      const active = field.value === value
+                      const active = field.value === value;
                       return (
                         <button
                           key={value}
@@ -809,7 +898,7 @@ export function AddProductSheet({
                             ) : null}
                           </span>
                         </button>
-                      )
+                      );
                     })}
                   </div>
                 )}
@@ -854,11 +943,11 @@ export function AddProductSheet({
 
                   <div className="divide-y divide-slate-100">
                     {tierFields.map((item, index) => {
-                      const isLast = index === tierFields.length - 1
-                      const tierErrors = errors.priceTiers?.[index]
+                      const isLast = index === tierFields.length - 1;
+                      const tierErrors = errors.priceTiers?.[index];
                       const errorText =
                         tierErrors?.endQty?.message ??
-                        tierErrors?.price?.message
+                        tierErrors?.price?.message;
                       return (
                         <div key={item.id} className="px-3 py-2.5">
                           <div className="grid grid-cols-[2.75rem_1fr_1fr_1.3fr_2.25rem] items-center gap-2">
@@ -884,16 +973,16 @@ export function AddProductSheet({
                               {...register(`priceTiers.${index}.endQty`, {
                                 validate: (value) => {
                                   if (getValues("pricingType") !== "bulk")
-                                    return true
+                                    return true;
                                   if (!value)
-                                    return isLast || "End quantity is required"
+                                    return isLast || "End quantity is required";
                                   const start = Number(
-                                    getValues(`priceTiers.${index}.startQty`)
-                                  )
+                                    getValues(`priceTiers.${index}.startQty`),
+                                  );
                                   return (
                                     Number(value) >= start ||
                                     `End quantity must be ${start} or more`
-                                  )
+                                  );
                                 },
                               })}
                             />
@@ -932,7 +1021,7 @@ export function AddProductSheet({
                             </p>
                           ) : null}
                         </div>
-                      )
+                      );
                     })}
                   </div>
 
@@ -961,18 +1050,18 @@ export function AddProductSheet({
               control={control}
               name="colors"
               render={({ field }) => {
-                const selected: string[] = field.value ?? []
+                const selected: string[] = field.value ?? [];
                 const customColors = selected.filter(
                   (hex) =>
-                    !PRESET_COLORS.some((preset) => sameHex(preset.hex, hex))
-                )
+                    !PRESET_COLORS.some((preset) => sameHex(preset.hex, hex)),
+                );
                 const options = [
                   ...PRESET_COLORS,
                   ...customColors.map((hex) => ({
                     name: hex.toUpperCase(),
                     hex,
                   })),
-                ]
+                ];
 
                 return (
                   <Section
@@ -986,9 +1075,9 @@ export function AddProductSheet({
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {options.map((color) => {
                         const checked = selected.some((c) =>
-                          sameHex(c, color.hex)
-                        )
-                        const id = `color-${color.hex.replace("#", "")}`
+                          sameHex(c, color.hex),
+                        );
+                        const id = `color-${color.hex.replace("#", "")}`;
                         return (
                           <label
                             key={color.hex}
@@ -1007,7 +1096,7 @@ export function AddProductSheet({
                                   color.hex,
                                   value === true,
                                   selected,
-                                  field.onChange
+                                  field.onChange,
                                 )
                               }
                             />
@@ -1018,7 +1107,7 @@ export function AddProductSheet({
                             />
                             <span className="truncate">{color.name}</span>
                           </label>
-                        )
+                        );
                       })}
 
                       <button
@@ -1109,12 +1198,12 @@ export function AddProductSheet({
                       </p>
                     ) : null}
                   </Section>
-                )
+                );
               }}
             />
           </div>
 
-          <SheetFooter className="shrink-0 flex-row justify-end gap-2 border-t border-slate-200 bg-white px-5 py-3.5 sm:px-6">
+          <SheetFooter className="mt-0 shrink-0 flex-row items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-3.5 sm:px-6">
             <Button
               type="button"
               variant="outline"
@@ -1145,5 +1234,5 @@ export function AddProductSheet({
         </div>
       ) : null}
     </Sheet>
-  )
+  );
 }
