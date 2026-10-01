@@ -127,3 +127,18 @@
     @apply font-sans;
     }
 }
+
+  .phone-input .PhoneInputInput {
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      background: transparent;
+      color: #14161a;
+      font-size: 0.875rem;
+      font-weight: 500;
+      outline: none;
+  }
+
+  .phone-input .PhoneInputInput::placeholder {
+      color: #9aa0a8;
+  }
