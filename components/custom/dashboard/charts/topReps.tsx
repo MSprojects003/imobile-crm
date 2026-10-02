@@ -76,7 +76,7 @@ export function TopReps() {
 							<Medal className="size-[18px]" aria-hidden="true" />
 						</span>
 						<div>
-							<h2 id="top-reps-title" className="truncate text-base font-semibold text-slate-900">
+							<h2 id="top-reps-title" className="truncate text-sm font-semibold text-slate-900">
 								Top 5 reps
 							</h2>
 							<p className="mt-0.5 text-xs text-slate-500">Sample data</p>
@@ -113,13 +113,13 @@ export function TopReps() {
 
 						return (
 						<li key={rep.name} className="flex min-h-[68px] items-center gap-2 py-3 sm:gap-3">
-							<span className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-semibold tabular-nums text-slate-600">
+							<span className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-100 text-[11px] font-semibold tabular-nums text-slate-600">
 								{index + 1}
 							</span>
 							<div className="min-w-0 flex-1">
 								<Tooltip>
 									<TooltipTrigger
-										render={<button type="button" className="block w-full truncate text-left text-sm font-medium text-slate-800" />}
+										render={<button type="button" className="block w-full truncate text-left text-xs font-medium text-slate-800" />}
 									>
 										{rep.name}
 									</TooltipTrigger>
@@ -127,7 +127,7 @@ export function TopReps() {
 								</Tooltip>
 								<Tooltip>
 									<TooltipTrigger
-										render={<button type="button" className="mt-0.5 block w-full truncate text-left text-xs text-slate-500" />}
+										render={<button type="button" className="mt-0.5 block w-full truncate text-left text-[11px] text-slate-500" />}
 									>
 										{rep.phone}
 									</TooltipTrigger>
@@ -161,7 +161,7 @@ export function TopReps() {
 								</button>
 							)}
 							<div className="shrink-0 text-right">
-								<p className="text-sm font-semibold tabular-nums text-slate-900">
+								<p className="text-xs font-semibold tabular-nums text-slate-900">
 									{amountFormatter.format(rep.amount)}
 								</p>
 								<p className="mt-0.5 text-[11px] text-slate-500">Sales</p>

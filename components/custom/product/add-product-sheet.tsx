@@ -103,9 +103,9 @@ const DEFAULT_VALUES: ProductFormValues = {
 };
 
 const inputClass =
-  "h-10 rounded-md border-slate-200 px-3 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
+  "h-10 rounded-md border-slate-200 px-3 text-xs md:text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
 const textareaClass =
-  "min-h-20 resize-y rounded-md border-slate-200 px-3 py-2.5 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
+  "min-h-20 resize-y rounded-md border-slate-200 px-3 py-2.5 text-xs md:text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
 
 const sameHex = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
@@ -128,7 +128,7 @@ function Section({
     <section className="space-y-4 border-b border-slate-100 px-5 py-6 last:border-b-0 sm:px-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-0.5">
-          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-xs font-semibold text-slate-900">{title}</h3>
           {description ? (
             <p className="text-xs leading-5 text-slate-500">{description}</p>
           ) : null}
@@ -157,7 +157,7 @@ function Field({
     <div className="space-y-1.5">
       <label
         htmlFor={htmlFor}
-        className="flex items-center gap-1.5 text-[13px] font-medium text-slate-700"
+        className="flex items-center gap-1.5 text-xs font-medium text-slate-700"
       >
         {label}
         {optional ? (
@@ -429,13 +429,13 @@ export function AddProductSheet({
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-dvh min-h-0 flex-col gap-0 overflow-hidden p-0 !w-screen sm:!max-w-2xl"
+        className="flex h-dvh min-h-0 flex-col gap-0 overflow-hidden p-0 !w-screen sm:!max-w-xl"
       >
         <SheetHeader className="shrink-0 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
-          <SheetTitle className="text-base font-semibold text-slate-900">
+          <SheetTitle className="text-sm text-slate-900">
             Add product
           </SheetTitle>
-          <SheetDescription className="text-[13px] text-slate-500">
+          <SheetDescription className="text-xs text-slate-500">
             Fill in the details below to add a product to your catalogue.
           </SheetDescription>
         </SheetHeader>
@@ -447,7 +447,7 @@ export function AddProductSheet({
         >
           {formError ? (
             <p
-              className="mx-5 mt-4 shrink-0 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:mx-6"
+              className="mx-5 mt-4 shrink-0 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 sm:mx-6"
               role="alert"
             >
               {formError}
@@ -455,7 +455,7 @@ export function AddProductSheet({
           ) : null}
           {catalogError ? (
             <p
-              className="mx-5 mt-4 shrink-0 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 sm:mx-6"
+              className="mx-5 mt-4 shrink-0 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 sm:mx-6"
               role="alert"
             >
               {catalogError}
@@ -584,7 +584,7 @@ export function AddProductSheet({
                       >
                         <SelectTrigger
                           id="product-category"
-                          className="h-10 w-full text-sm"
+                          className="h-10 w-full text-xs"
                         >
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
@@ -624,7 +624,7 @@ export function AddProductSheet({
                       >
                         <SelectTrigger
                           id="product-brand"
-                          className="h-10 w-full text-sm"
+                          className="h-10 w-full text-xs"
                         >
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
@@ -762,7 +762,7 @@ export function AddProductSheet({
                 <div className="space-y-0.5">
                   <label
                     htmlFor="has-specs"
-                    className="text-[13px] font-medium text-slate-800"
+                    className="text-xs font-medium text-slate-800"
                   >
                     Add feature specifications
                   </label>
@@ -817,7 +817,7 @@ export function AddProductSheet({
                     variant="outline"
                     size="sm"
                     onClick={() => appendSpec({ value: "" })}
-                    className="gap-1.5 text-[13px]"
+                    className="gap-1.5 text-xs"
                   >
                     <Plus className="size-4" aria-hidden="true" />
                     Add feature
@@ -880,7 +880,7 @@ export function AddProductSheet({
                             <Icon className="size-4" aria-hidden="true" />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block text-[13px] font-semibold text-slate-900">
+                            <span className="block text-xs font-semibold text-slate-900">
                               {label}
                             </span>
                             <span className="mt-0.5 block text-xs leading-5 text-slate-500">
@@ -955,7 +955,7 @@ export function AddProductSheet({
                               {index + 1}
                             </span>
 
-                            <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 tabular-nums">
+                            <div className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-xs text-slate-600 tabular-nums">
                               {tiers[index]?.startQty ?? item.startQty}
                               <input
                                 type="hidden"
@@ -1035,7 +1035,7 @@ export function AddProductSheet({
                       size="sm"
                       disabled={!canAddTier}
                       onClick={handleAddTier}
-                      className="h-8 shrink-0 gap-1.5 bg-white text-[13px]"
+                      className="h-8 shrink-0 gap-1.5 bg-white text-xs"
                     >
                       <Plus className="size-4" aria-hidden="true" />
                       Add tier
@@ -1082,7 +1082,7 @@ export function AddProductSheet({
                           <label
                             key={color.hex}
                             htmlFor={id}
-                            className={`flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-[13px] transition-colors ${
+                            className={`flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-xs transition-colors ${
                               checked
                                 ? "border-[#ed1c2e]/40 bg-rose-50/50 text-slate-900"
                                 : "border-slate-200 text-slate-700 hover:bg-slate-50"
@@ -1114,7 +1114,7 @@ export function AddProductSheet({
                         type="button"
                         aria-expanded={pickerOpen}
                         onClick={() => setPickerOpen((value) => !value)}
-                        className={`flex items-center gap-2.5 rounded-md border border-dashed px-3 py-2 text-[13px] font-medium transition-colors ${
+                        className={`flex items-center gap-2.5 rounded-md border border-dashed px-3 py-2 text-xs font-medium transition-colors ${
                           pickerOpen
                             ? "border-[#ed1c2e] bg-rose-50/50 text-[#ed1c2e]"
                             : "border-slate-300 text-slate-600 hover:border-[#ed1c2e]/50 hover:text-[#ed1c2e]"
@@ -1149,14 +1149,14 @@ export function AddProductSheet({
                                     Hex code
                                   </label>
                                   <div className="relative">
-                                    <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-slate-400">
+                                    <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xs text-slate-400">
                                       #
                                     </span>
                                     <HexColorInput
                                       id="custom-hex"
                                       color={pickerColor}
                                       onChange={setPickerColor}
-                                      className="h-9 w-full rounded-md border border-slate-200 bg-white pr-2 pl-6 text-sm text-slate-800 uppercase outline-none focus-visible:border-[#ed1c2e] focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/20"
+                                      className="h-9 w-full rounded-md border border-slate-200 bg-white pr-2 pl-6 text-xs text-slate-800 uppercase outline-none focus-visible:border-[#ed1c2e] focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/20"
                                     />
                                   </div>
                                 </div>
@@ -1171,7 +1171,7 @@ export function AddProductSheet({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setPickerOpen(false)}
-                                className="bg-white text-[13px]"
+                                className="bg-white text-xs"
                               >
                                 Cancel
                               </Button>
@@ -1181,7 +1181,7 @@ export function AddProductSheet({
                                 onClick={() =>
                                   addCustomColor(selected, field.onChange)
                                 }
-                                className="gap-1.5 bg-[#ed1c2e] text-[13px] text-white hover:bg-[#d91829]"
+                                className="gap-1.5 bg-[#ed1c2e] text-xs text-white hover:bg-[#d91829]"
                               >
                                 <Plus className="size-4" aria-hidden="true" />
                                 Add color
@@ -1203,11 +1203,11 @@ export function AddProductSheet({
             />
           </div>
 
-          <SheetFooter className="mt-0 shrink-0 flex-row items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-3.5 sm:px-6">
+          <SheetFooter className="mt-0 shrink-0 flex-row items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:px-6">
             <Button
               type="button"
               variant="outline"
-              className="text-[13px]"
+              className="text-xs"
               disabled={isSubmitting}
               onClick={() => handleOpenChange(false)}
             >
@@ -1216,7 +1216,7 @@ export function AddProductSheet({
             <Button
               type="submit"
               disabled={isSubmitting || isLoadingCatalog || !!catalogError}
-              className="gap-1.5 bg-[#ed1c2e] text-[13px] text-white hover:bg-[#d91829]"
+              className="gap-1.5 bg-[#ed1c2e] text-xs text-white hover:bg-[#d91829]"
             >
               <Plus className="size-4" aria-hidden="true" />
               {isSubmitting ? "Saving..." : "Add product"}
@@ -1228,7 +1228,7 @@ export function AddProductSheet({
         <div
           role="status"
           aria-live="polite"
-          className="fixed right-4 bottom-4 z-[120] rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-medium text-emerald-800 shadow-lg sm:right-8 sm:bottom-8"
+          className="fixed right-4 bottom-4 z-[120] rounded-md border border-emerald-200 bg-white px-4 py-3 text-xs font-medium text-emerald-800 shadow-lg sm:right-8 sm:bottom-8"
         >
           {toastMessage}
         </div>

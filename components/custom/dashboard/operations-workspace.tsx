@@ -1,11 +1,21 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Search } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Menu } from "@base-ui/react/menu"
+import { Ellipsis, Eye, Phone, Search } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import {
   Table,
   TableBody,
@@ -14,7 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
+import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton"
+import { PageHeading } from "@/components/custom/dashboard/page-heading"
+import { fetchShops, updateShopStatus, type ShopRecord } from "@/lib/shops"
 
 type OrdersPage = "orders" | "shops"
 
@@ -25,15 +39,6 @@ type OrderRecord = {
   date: string
   amount: number
   status: "Completed" | "Processing" | "Cancelled"
-}
-
-type ShopRecord = {
-  name: string
-  location: string
-  manager: string
-  phone: string
-  orders: number
-  status: "Open" | "Needs review"
 }
 
 const sampleOrders: OrderRecord[] = [
@@ -48,22 +53,31 @@ const sampleOrders: OrderRecord[] = [
   { id: "ORD-1040", customer: "Mihiri Perera", shop: "Colombo City Store", date: "Sep 26, 2026", amount: 4900, status: "Completed" },
 ]
 
-const sampleShops: ShopRecord[] = [
-  { name: "Colombo City Store", location: "Colombo 03", manager: "Kasun Perera", phone: "+94 77 *** 2418", orders: 186, status: "Open" },
-  { name: "Kandy Central Store", location: "Kandy", manager: "Nadeesha Silva", phone: "+94 71 *** 9032", orders: 142, status: "Open" },
-  { name: "Galle Fort Store", location: "Galle", manager: "Ravindu Fernando", phone: "+94 76 *** 1854", orders: 98, status: "Open" },
-  { name: "Negombo Main Store", location: "Negombo", manager: "Isuru Jayasinghe", phone: "+94 75 *** 6720", orders: 76, status: "Needs review" },
-  { name: "Jaffna Town Store", location: "Jaffna", manager: "Amaya Dias", phone: "+94 78 *** 4156", orders: 61, status: "Open" },
-  { name: "Matara Market Store", location: "Matara", manager: "Dinuka Perera", phone: "+94 72 *** 3081", orders: 54, status: "Open" },
-  { name: "Kurunegala Point", location: "Kurunegala", manager: "Sachini Silva", phone: "+94 70 *** 6625", orders: 43, status: "Needs review" },
-]
-
 const pageSize = 6
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
   style: "currency",
   currency: "LKR",
   maximumFractionDigits: 0,
 })
+
+function TruncatedShopValue({ value }: { value: string | null | undefined }) {
+  if (!value) return <span className="text-slate-400">—</span>
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<button type="button" className="block max-w-full truncate text-left" />}>
+        {value}
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm break-words">{value}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function getDialablePhone(phone: string | null) {
+  if (!phone) return null
+  const dialable = phone.replace(/[^\d+]/g, "")
+  return /^\+[1-9]\d{7,14}$/.test(dialable) ? dialable : null
+}
 
 function badgeClass(status: string) {
   if (status === "Completed" || status === "Open") return "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -73,29 +87,61 @@ function badgeClass(status: string) {
 }
 
 export function OperationsWorkspace({ page }: { page: OrdersPage }) {
+  const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedShop, setSelectedShop] = useState<ShopRecord | null>(null)
   const isOrders = page === "orders"
+  const shopsQuery = useQuery({
+    queryKey: ["shops"],
+    queryFn: fetchShops,
+    enabled: !isOrders,
+  })
+  const shopStatusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => updateShopStatus(id, isActive),
+    onSuccess: async (_result, { id, isActive }) => {
+      queryClient.setQueryData<ShopRecord[]>(["shops"], (current) =>
+        current?.map((shop) => shop.id === id ? { ...shop, isActive } : shop)
+      )
+      setSelectedShop((current) => current?.id === id ? { ...current, isActive } : current)
+      await queryClient.invalidateQueries({ queryKey: ["shops"] })
+    },
+  })
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return isOrders ? sampleOrders : sampleShops
+    const shops = shopsQuery.data ?? []
+    if (!query) return isOrders ? sampleOrders : shops
 
     return isOrders
       ? sampleOrders.filter((order) => [order.id, order.customer, order.shop, order.status].some((value) => value.toLowerCase().includes(query)))
-      : sampleShops.filter((shop) => [shop.name, shop.location, shop.manager, shop.phone, shop.status].some((value) => value.toLowerCase().includes(query)))
-  }, [isOrders, search])
+      : shops.filter((shop) => [
+        shop.shopId ?? "",
+        shop.name,
+        shop.owner,
+        shop.staffName,
+        shop.staffPhone ?? "",
+        shop.isActive ? "active" : "deactive",
+      ].some((value) => value.toLowerCase().includes(query)))
+  }, [isOrders, search, shopsQuery.data])
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize))
   const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const title = isOrders ? "Orders" : "Shops"
 
   return (
     <section className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-5">
-      <p className="text-xs font-semibold uppercase text-slate-500">iMobile workspace</p>
+      <PageHeading
+        title={title}
+        description={
+          isOrders
+            ? "Review order activity, customers, and fulfillment status."
+            : "View shop owners, assigned staff, and current status."
+        }
+      />
       <label className="relative block w-full sm:max-w-sm">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
         <Input
           aria-label={`Search ${title.toLowerCase()}`}
-          className="h-10 rounded-sm border-slate-200 bg-white pl-9 text-sm"
+          className="h-9 rounded-sm border-slate-200 bg-white pl-9 text-xs"
           onChange={(event) => {
             setSearch(event.target.value)
             setCurrentPage(1)
@@ -106,7 +152,9 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
       </label>
 
       <section aria-label={title} className="overflow-hidden rounded-sm border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-        <Table>
+        {!isOrders && shopsQuery.isPending ? (
+          <TableSkeleton label="shops" columns={7} rows={5} />
+        ) : <Table>
           {isOrders ? (
             <>
               <TableHeader className="bg-slate-50/80">
@@ -136,35 +184,123 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
             <>
               <TableHeader className="bg-slate-50/80">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="min-w-48 pl-5">Shop</TableHead>
-                  <TableHead className="min-w-32">Location</TableHead>
-                  <TableHead className="min-w-40">Manager</TableHead>
+                  <TableHead className="min-w-32 pl-5">Shop ID</TableHead>
+                  <TableHead className="min-w-40">Name</TableHead>
+                  <TableHead className="min-w-36">Owner</TableHead>
+                  <TableHead className="min-w-36">Staff name</TableHead>
                   <TableHead className="min-w-36">Phone</TableHead>
-                  <TableHead className="min-w-24 text-right">Orders</TableHead>
-                  <TableHead className="min-w-36">Status</TableHead>
+                  <TableHead className="min-w-28">Status</TableHead>
+                  <TableHead className="min-w-32 pr-5">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(visibleRows as ShopRecord[]).map((shop) => (
-                  <TableRow key={shop.name}>
-                    <TableCell className="pl-5 font-medium text-slate-800">{shop.name}</TableCell>
-                    <TableCell className="text-slate-600">{shop.location}</TableCell>
-                    <TableCell className="text-slate-600">{shop.manager}</TableCell>
-                    <TableCell className="tabular-nums text-slate-500">{shop.phone}</TableCell>
-                    <TableCell className="text-right tabular-nums text-slate-700">{shop.orders}</TableCell>
-                    <TableCell><Badge variant="outline" className={badgeClass(shop.status)}>{shop.status}</Badge></TableCell>
+                {shopsQuery.isError ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center text-xs text-rose-700">
+                      {shopsQuery.error instanceof Error ? shopsQuery.error.message : "Could not load shops."}
+                    </TableCell>
+                  </TableRow>
+                ) : (visibleRows as ShopRecord[]).map((shop) => (
+                  <TableRow key={shop.id}>
+                    <TableCell className="max-w-36 pl-5 font-mono text-xs text-slate-700">
+                      <TruncatedShopValue value={shop.shopId} />
+                    </TableCell>
+                    <TableCell className="max-w-48 font-medium text-slate-800">
+                      <TruncatedShopValue value={shop.name} />
+                    </TableCell>
+                    <TableCell className="max-w-40 text-slate-600">
+                      <TruncatedShopValue value={shop.owner} />
+                    </TableCell>
+                    <TableCell className="max-w-40 text-slate-600">
+                      <TruncatedShopValue value={shop.staffName} />
+                    </TableCell>
+                    <TableCell className="max-w-40 text-slate-500">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <div className="min-w-0 flex-1 tabular-nums">
+                          <TruncatedShopValue value={shop.staffPhone} />
+                        </div>
+                        {getDialablePhone(shop.staffPhone) && (
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <a
+                                  href={`tel:${getDialablePhone(shop.staffPhone)}`}
+                                  aria-label={`Call ${shop.staffName || "staff member"}`}
+                                  className="grid size-7 shrink-0 place-items-center rounded-sm text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:outline-2 focus-visible:outline-[#ed1c2e]"
+                                />
+                              }
+                            >
+                              <Phone className="size-3.5" aria-hidden="true" />
+                            </TooltipTrigger>
+                            <TooltipContent>Call {shop.staffName || shop.staffPhone}</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={shop.isActive ? "true" : "false"}
+                        onValueChange={(value: string | null) => {
+                          if (value === "true" || value === "false") {
+                            shopStatusMutation.mutate({ id: shop.id, isActive: value === "true" })
+                          }
+                        }}
+                      >
+                        <SelectTrigger
+                          aria-label={`${shop.name} status`}
+                          disabled={shopStatusMutation.isPending && shopStatusMutation.variables?.id === shop.id}
+                          className={`h-8 min-w-24 px-2 text-xs ${shop.isActive
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-slate-50 text-slate-600"}`}
+                        >
+                          <SelectValue>{(value) => value === "true" ? "Active" : "Deactive"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="text-xs">
+                          <SelectItem value="true" className="text-xs">Active</SelectItem>
+                          <SelectItem value="false" className="text-xs">Deactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="pr-5">
+                      <Menu.Root>
+                        <Menu.Trigger
+                          aria-label={`Actions for ${shop.name}`}
+                          className="inline-grid size-8 place-items-center rounded-md border border-transparent text-slate-500 outline-none hover:border-slate-200 hover:bg-white hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30"
+                        >
+                          <Ellipsis className="size-4" aria-hidden="true" />
+                        </Menu.Trigger>
+                        <Menu.Portal>
+                          <Menu.Positioner side="bottom" align="end" sideOffset={4} className="z-[120]">
+                            <Menu.Popup className="min-w-40 rounded-md border border-slate-200 bg-white p-1 text-slate-800 shadow-lg outline-none">
+                              <Menu.Item
+                                onClick={() => setSelectedShop(shop)}
+                                className="flex h-9 cursor-default items-center gap-2 rounded-sm px-2.5 text-xs outline-none hover:bg-slate-100 data-highlighted:bg-slate-100"
+                              >
+                                <Eye className="size-4 text-slate-500" aria-hidden="true" />
+                                View details
+                              </Menu.Item>
+                            </Menu.Popup>
+                          </Menu.Positioner>
+                        </Menu.Portal>
+                      </Menu.Root>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </>
           )}
-          {visibleRows.length === 0 && (
+          {visibleRows.length === 0 && (isOrders || !shopsQuery.isError) && (
             <TableBody>
-              <TableRow><TableCell colSpan={6} className="h-24 text-center text-sm text-slate-500">No {title.toLowerCase()} match your search.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={isOrders ? 6 : 7} className="h-24 text-center text-xs text-slate-500">No {title.toLowerCase()} match your search.</TableCell></TableRow>
             </TableBody>
           )}
-        </Table>
+        </Table>}
       </section>
+      {shopStatusMutation.isError && !isOrders && (
+        <p role="alert" className="text-xs text-rose-700">
+          {shopStatusMutation.error instanceof Error ? shopStatusMutation.error.message : "Could not update shop status."}
+        </p>
+      )}
 
       <TablePaginationFooter
         currentPage={currentPage}
@@ -173,6 +309,39 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
         itemLabel={title.toLowerCase()}
         onPageChange={setCurrentPage}
       />
+      <Sheet open={Boolean(selectedShop)} onOpenChange={(open) => {
+        if (!open) setSelectedShop(null)
+      }}>
+        <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-md">
+          <SheetHeader className="border-b border-slate-200 px-5 py-5">
+            <SheetTitle className="text-sm">Shop details</SheetTitle>
+            <SheetDescription className="text-xs">
+              Shop and assigned staff information.
+            </SheetDescription>
+          </SheetHeader>
+          {selectedShop && (
+            <dl className="divide-y divide-slate-100 px-5">
+              {[
+                ["Shop ID", selectedShop.shopId],
+                ["Name", selectedShop.name],
+                ["Owner", selectedShop.owner],
+                ["Staff name", selectedShop.staffName],
+                ["Staff phone", selectedShop.staffPhone],
+                ["Status", selectedShop.isActive ? "Active" : "Deactive"],
+                ["Address", selectedShop.address],
+                ["Area", selectedShop.area],
+                ["Shop phone", selectedShop.phone],
+                ["Email", selectedShop.email],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-start justify-between gap-4 py-3">
+                  <dt className="text-xs text-slate-500">{label}</dt>
+                  <dd className="max-w-[65%] break-words text-right text-xs font-medium text-slate-900">{value || "—"}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </SheetContent>
+      </Sheet>
     </section>
   )
 }

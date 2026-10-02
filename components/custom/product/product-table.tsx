@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Product } from "@/components/custom/product/product-data";
 import type { ProductEdit, ProductFieldEdit } from "@/lib/api/products";
+import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton";
 
 type ProductTableProps = {
   products: Product[];
@@ -192,7 +193,7 @@ function EditableCell({
   }
 
   const alignClass = align === "right" ? "text-right" : "text-left";
-  const controlClass = `h-8 w-full min-w-12 rounded-sm border border-slate-300 bg-transparent px-2 text-sm text-slate-800 outline-none focus:border-[#ed1c2e] focus:ring-2 focus:ring-[#ed1c2e]/20 ${alignClass}`;
+  const controlClass = `h-8 w-full min-w-12 rounded-sm border border-slate-300 bg-transparent px-2 text-[13px] text-slate-800 outline-none focus:border-[#ed1c2e] focus:ring-2 focus:ring-[#ed1c2e]/20 ${alignClass}`;
 
   return (
     <div className={`min-w-0 ${alignClass}`}>
@@ -205,7 +206,7 @@ function EditableCell({
           >
             <SelectTrigger
               aria-label={`Edit ${field.replaceAll("_", " ")}`}
-              className="h-8 w-full min-w-0 rounded-sm border-slate-300 bg-transparent px-2 text-sm font-normal text-slate-800 shadow-none hover:bg-transparent focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/20"
+              className="h-8 w-full min-w-0 rounded-sm border-slate-300 bg-transparent px-2 text-[13px] font-normal text-slate-800 shadow-none hover:bg-transparent focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/20"
             >
               <SelectValue placeholder={`Select ${field}`} />
             </SelectTrigger>
@@ -243,7 +244,7 @@ function EditableCell({
                   setDraft(String(getFieldValue(product, field)));
                   setEditing(true);
                 }}
-                className={`block h-8 w-full min-w-0 cursor-text truncate border border-transparent bg-transparent px-2 text-sm outline-none focus-visible:rounded-sm focus-visible:border-[#ed1c2e] ${alignClass} ${error ? "text-rose-700" : ""}`}
+                className={`block h-8 w-full min-w-0 cursor-text truncate border border-transparent bg-transparent px-2 text-[13px] outline-none focus-visible:rounded-sm focus-visible:border-[#ed1c2e] ${alignClass} ${error ? "text-rose-700" : ""}`}
               >
                 {saving
                   ? "Saving..."
@@ -285,7 +286,7 @@ function RowActions({
   onEditProduct: (product: Product) => void;
 }) {
   const itemClass =
-    "flex h-9 cursor-default items-center gap-2.5 rounded-sm px-2.5 text-sm outline-none hover:bg-slate-100 data-highlighted:bg-slate-100";
+    "flex h-9 cursor-default items-center gap-2.5 rounded-sm px-2.5 text-[13px] outline-none hover:bg-slate-100 data-highlighted:bg-slate-100";
 
   return (
     <Menu.Root>
@@ -385,14 +386,24 @@ export function ProductTable({
   isLoading = false,
   loadError = "",
 }: ProductTableProps) {
+  if (isLoading) {
+    return (
+      <TableSkeleton
+        label="products"
+        columns={6}
+        rows={5}
+        className="rounded-lg border-slate-300 shadow-sm"
+        tableClassName="min-w-[860px] border-collapse"
+      />
+    )
+  }
+
   const stateMessage = loadError ? (
-    <p role="alert" className="text-sm text-rose-700">
+    <p role="alert" className="text-[13px] text-rose-700">
       {loadError}
     </p>
-  ) : isLoading ? (
-    <p className="text-sm text-slate-500">Loading products...</p>
   ) : products.length === 0 ? (
-    <div className="text-sm text-slate-500">
+    <div className="text-[13px] text-slate-500">
       <Package
         className="mx-auto mb-2 size-5 text-slate-400"
         aria-hidden="true"
@@ -441,20 +452,21 @@ export function ProductTable({
                 return (
                   <TableRow
                     key={product.id}
-                    className="border-b border-slate-200 bg-white transition-colors last:border-b-0 even:bg-slate-50 hover:bg-rose-50/40"
+                    className="border-b border-slate-200  bg-white transition-colors last:border-b-0 even:bg-slate-50 hover:bg-rose-50/40"
                   >
                     <TableCell className={bodyCell}>
-                      <div className="flex min-w-0 items-center gap-3 pl-1">
+                      <div className="flex min-w-2 items-center  gap-1 pl-1">
                         <Thumb url={product.images?.[0]} />
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1  ">
+                          <span className="text-md gap-2 font-semibold ">
                           <EditableCell
                             product={product}
                             field="name"
                             displayValue={product.name}
                             onEdit={onEdit}
-                          />
+                          /></span>
                           <div className="flex min-w-0 items-center gap-1">
-                            <div className="max-w-36 min-w-0 flex-1">
+                            <div className="max-w-36 text-slate-500 text-xs min-w-0 flex-1">
                               <EditableCell
                                 product={product}
                                 field="sku"
@@ -596,7 +608,7 @@ export function ProductTable({
                     />
                   </div>
 
-                  <dl className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 bg-white text-sm">
+                  <dl className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 bg-white text-[13px]">
                     <div className="border-r border-b border-slate-200 p-2">
                       <dt className="px-2 text-[11px] text-slate-500">
                         Category

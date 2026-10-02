@@ -92,10 +92,10 @@ export function SalesTrendChart() {
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-6">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="sales-trend-title" className="text-base font-semibold text-slate-900">
+            <h2 id="sales-trend-title" className="text-sm font-semibold text-slate-900">
               Sales overview
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-xs text-slate-500">
               Monthly sales activity · Sample data
             </p>
           </div>
@@ -105,14 +105,14 @@ export function SalesTrendChart() {
               if (value) setPeriod(value as ChartPeriod)
             }}
           >
-            <SelectTrigger aria-label="Select sales chart period">
+            <SelectTrigger aria-label="Select sales chart period" className="h-8 min-w-0 px-2 text-xs">
               <SelectValue>
                 {(value) => periodOptions.find((option) => option.value === value)?.label ?? "Select period"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {periodOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={option.value} className="text-xs">
                   {option.label}
                 </SelectItem>
               ))}
@@ -135,12 +135,14 @@ export function SalesTrendChart() {
               axisLine={false}
               tickMargin={10}
               minTickGap={20}
+              tick={{ fontSize: 10 }}
             />
             <YAxis
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               width={36}
+              tick={{ fontSize: 10 }}
             />
             <ChartTooltip
               cursor={false}

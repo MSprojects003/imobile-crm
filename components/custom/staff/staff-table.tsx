@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton"
+import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton"
 import {
   Table,
   TableBody,
@@ -19,7 +19,7 @@ function TruncatedValue({ value, className }: { value: string; className: string
       <TooltipTrigger render={<button type="button" className={`block w-full truncate text-left ${className}`} />}>
         {value}
       </TooltipTrigger>
-      <TooltipContent side="top" align="start">{value}</TooltipContent>
+      <TooltipContent side="top" align="start" className="text-xs">{value}</TooltipContent>
     </Tooltip>
   )
 }
@@ -39,9 +39,20 @@ export function StaffTable({
   updatingStaffId: string | null
   onStatusChange: (id: string, isActive: boolean) => void
 }) {
+  if (isLoading) {
+    return (
+      <TableSkeleton
+        label="staff"
+        columns={7}
+        rows={4}
+        className="shadow-sm shadow-slate-900/3"
+      />
+    )
+  }
+
   return (
     <section aria-label="Staff list" className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-900/3">
-      <Table>
+      <Table className="text-xs">
         <TableHeader className="bg-slate-50">
           <TableRow className="hover:bg-transparent">
             <TableHead className="min-w-24 pl-4 text-xs font-semibold text-slate-500">Staff ID</TableHead>
@@ -54,16 +65,12 @@ export function StaffTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading ? Array.from({ length: 4 }, (_, index) => (
-            <TableRow key={`staff-loading-${index}`}>
-              <TableCell colSpan={7} className="py-4"><Skeleton className="h-8 w-full rounded-sm" /></TableCell>
-            </TableRow>
-          )) : error ? (
-            <TableRow><TableCell colSpan={7} className="h-24 text-center text-sm text-rose-700">{error}</TableCell></TableRow>
+          {error ? (
+            <TableRow><TableCell colSpan={7} className="h-24 text-center text-xs text-rose-700">{error}</TableCell></TableRow>
           ) : staff.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="h-32 text-center">
-                <p className="text-sm font-medium text-slate-700">{hasFilters ? "No staff match these filters" : "No staff members yet"}</p>
+                <p className="text-xs font-medium text-slate-700">{hasFilters ? "No staff match these filters" : "No staff members yet"}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   {hasFilters ? "Try changing or clearing your filters." : "New staff members will appear here after they are added."}
                 </p>
@@ -75,16 +82,16 @@ export function StaffTable({
               <TableRow key={member.id}>
                 <TableCell className="pl-4 font-mono text-xs font-semibold text-slate-700">{member.staffId}</TableCell>
                 <TableCell className="max-w-36 font-medium text-slate-900">
-                  <TruncatedValue value={member.fullName} className="text-sm font-medium text-slate-900" />
+                  <TruncatedValue value={member.fullName} className="text-xs font-medium text-slate-900" />
                 </TableCell>
                 <TableCell className="max-w-32 whitespace-nowrap text-slate-600">
-                  <TruncatedValue value={member.phone} className="text-sm text-slate-600" />
+                  <TruncatedValue value={member.phone} className="text-xs text-slate-600" />
                 </TableCell>
                 <TableCell className="max-w-28 text-slate-600">
-                  <TruncatedValue value={member.role ?? ""} className="text-sm text-slate-600" />
+                  <TruncatedValue value={member.role ?? ""} className="text-xs text-slate-600" />
                 </TableCell>
                 <TableCell className="max-w-28 text-slate-600">
-                  <TruncatedValue value={member.nic ?? ""} className="text-sm text-slate-600" />
+                  <TruncatedValue value={member.nic ?? ""} className="text-xs text-slate-600" />
                 </TableCell>
                 <TableCell>
                   <Select
@@ -102,9 +109,9 @@ export function StaffTable({
                     >
                       <SelectValue>{(value) => value === "active" ? "Active" : "Deactive"}</SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="deactive">Deactive</SelectItem>
+                    <SelectContent className="text-xs">
+                      <SelectItem value="active" className="text-xs">Active</SelectItem>
+                      <SelectItem value="deactive" className="text-xs">Deactive</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>

@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
-import { Skeleton } from "@/components/ui/skeleton"
+import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton"
 import { supabase } from "@/lib/supabase"
 
 type CatalogTab = "categories" | "brands"
@@ -108,7 +108,7 @@ function CatalogFields({
   return (
     <div className="space-y-5 pt-5">
       <div className="space-y-2">
-        <label htmlFor={`catalog-name-${tab}`} className="text-sm font-medium text-slate-800">
+        <label htmlFor={`catalog-name-${tab}`} className="text-xs font-medium text-slate-800">
           {tab === "categories" ? "Category name" : "Brand name"}
         </label>
         <Input
@@ -120,12 +120,12 @@ function CatalogFields({
           placeholder={`Enter ${singular} name`}
           required
           value={name}
-          className="h-10 rounded-md border-slate-200 px-3 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+          className="h-10 rounded-md border-slate-200 px-3 text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
         />
       </div>
 
       <div className="space-y-2">
-        <label htmlFor={fileInputId} className="text-sm font-medium text-slate-800">
+        <label htmlFor={fileInputId} className="text-xs font-medium text-slate-800">
           Image
         </label>
         <label
@@ -136,7 +136,7 @@ function CatalogFields({
             <ImagePlus className="size-4" aria-hidden="true" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-slate-700">
+            <span className="block truncate text-xs font-medium text-slate-700">
               {image?.name ?? "Choose an image"}
             </span>
             <span className="mt-0.5 block text-xs text-slate-500">PNG, JPG or WEBP</span>
@@ -154,12 +154,12 @@ function CatalogFields({
       </div>
 
       <div className="space-y-2">
-        <label htmlFor={`catalog-description-${tab}`} className="text-sm font-medium text-slate-800">
+        <label htmlFor={`catalog-description-${tab}`} className="text-xs font-medium text-slate-800">
           Description
         </label>
         <textarea
           id={`catalog-description-${tab}`}
-          className="min-h-28 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 disabled:bg-slate-50 disabled:opacity-50"
+          className="min-h-28 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 disabled:bg-slate-50 disabled:opacity-50"
           disabled={disabled}
           maxLength={500}
           onChange={(event) => onDescriptionChange(event.target.value)}
@@ -308,54 +308,55 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
       }}>
         <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex flex-col gap-4 border-b border-slate-200 bg-background/95 px-5 py-4 backdrop-blur sm:-mx-8 sm:-mt-8 sm:px-8">
           <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-500">iMobile workspace</p>
-              <h1 className="mt-1 truncate text-xl font-semibold text-slate-900">{tabDetails[activeTab].title}</h1>
+            <div className="min-w-0 md:hidden">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">iMobile workspace</p>
+              <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-900">{tabDetails[activeTab].title}</h1>
+              <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                {activeTab === "categories"
+                  ? "Organize products into clear, easy-to-browse categories."
+                  : "Manage the brands available across your product catalog."}
+              </p>
             </div>
-            <Button
-              type="button"
-              onClick={openAddSheet}
-              className="h-10 shrink-0 gap-2 bg-[#ed1c2e] px-3 text-white hover:bg-[#d91829]"
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Add {tabDetails[activeTab].singular}</span>
-              <span className="sm:hidden">Add</span>
-            </Button>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <label className="relative block w-full sm:max-w-sm">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-              <Input
-                aria-label={`Search ${tabDetails[activeTab].title.toLowerCase()}`}
-                className="h-10 rounded-sm border-slate-200 bg-white pl-9 pr-10 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
-                onChange={(event) => {
-                  setSearch(event.target.value)
-                  setPage(1)
-                }}
-                placeholder={`Search ${tabDetails[activeTab].title.toLowerCase()} by name or description`}
-                value={search}
-              />
-              {search && (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  className="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#ed1c2e]"
-                  onClick={() => {
-                    setSearch("")
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <label className="relative block min-w-0 flex-1 sm:max-w-sm">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                <Input
+                  aria-label={`Search ${tabDetails[activeTab].title.toLowerCase()}`}
+                  className="h-9 rounded-sm border-slate-200 bg-white pl-9 pr-10 text-[11px] focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+                  onChange={(event) => {
+                    setSearch(event.target.value)
                     setPage(1)
                   }}
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </button>
-              )}
-            </label>
-            <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-end">
-            <TabsList aria-label="Catalog type">
-              <TabsTab value="categories">Categories</TabsTab>
-              <TabsTab value="brands">Brands</TabsTab>
-            </TabsList>
-              <span className="whitespace-nowrap text-xs tabular-nums text-slate-500 sm:hidden">{filteredEntries.length} items</span>
+                  placeholder={`Search ${tabDetails[activeTab].title.toLowerCase()} by name or description`}
+                  value={search}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    className="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#ed1c2e]"
+                    onClick={() => {
+                      setSearch("")
+                      setPage(1)
+                    }}
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </button>
+                )}
+              </label>
+              <Button
+                type="button"
+                onClick={openAddSheet}
+                className="h-9 shrink-0 gap-2 bg-[#ed1c2e] px-3 text-xs text-white hover:bg-[#d91829] md:ml-auto"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Add {tabDetails[activeTab].singular}</span>
+                <span className="sm:hidden">Add</span>
+              </Button>
             </div>
+            <span className="whitespace-nowrap text-xs tabular-nums text-slate-500 sm:hidden">{filteredEntries.length} items</span>
           </div>
         </div>
 
@@ -392,7 +393,7 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
       />
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-md">
+        <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-sm">
           <Tabs
             value={sheetTab}
             onValueChange={(value) => {
@@ -405,18 +406,18 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
             className="flex min-h-0 flex-1 flex-col"
           >
             <SheetHeader className="border-b border-slate-200 px-5 py-5 sm:px-6">
-              <SheetTitle className="text-lg font-semibold">Add to catalog</SheetTitle>
+              <SheetTitle className="text-sm">Add to catalog</SheetTitle>
               <SheetDescription>Choose a catalog type, then enter its details.</SheetDescription>
-              <TabsList className="mt-4 w-full">
-                <TabsTab value="categories" className="flex-1">Categories</TabsTab>
-                <TabsTab value="brands" className="flex-1">Brands</TabsTab>
+              <TabsList className="mt-4 w-full text-xs">
+                <TabsTab value="categories" className="flex-1 text-xs">Categories</TabsTab>
+                <TabsTab value="brands" className="flex-1 text-xs">Brands</TabsTab>
               </TabsList>
             </SheetHeader>
 
             <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
               <div className="flex-1 overflow-y-auto px-5 pb-6 sm:px-6">
                 {formError && (
-                  <p className="mt-5 rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-sm leading-5 text-rose-700" role="alert">
+                  <p className="mt-5 rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700" role="alert">
                     {formError}
                   </p>
                 )}
@@ -446,10 +447,10 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
                 </TabsPanel>
               </div>
               <SheetFooter className="flex-row justify-end border-t border-slate-200 bg-white px-5 py-4 sm:px-6">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="text-xs">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="gap-2 bg-[#ed1c2e] text-white hover:bg-[#d91829]">
+                <Button type="submit" disabled={isSubmitting} className="gap-2 bg-[#ed1c2e] text-xs text-white hover:bg-[#d91829]">
                   <Plus className="size-4" aria-hidden="true" />
                   {isSubmitting ? "Saving..." : `Add ${tabDetails[sheetTab].singular}`}
                 </Button>
@@ -479,9 +480,13 @@ function CatalogList({
 }) {
   const { title, singular, icon: Icon } = tabDetails[tab]
 
+  if (isLoading) {
+    return <TableSkeleton label={title.toLowerCase()} columns={5} rows={pageSize} />
+  }
+
   return (
     <section aria-label={title} className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03]">
-      <Table>
+      <Table className="text-xs">
         <TableHeader className="bg-slate-50">
           <TableRow className="hover:bg-transparent">
             <TableHead className="min-w-48 pl-5 text-xs font-semibold text-slate-500">Name</TableHead>
@@ -492,14 +497,8 @@ function CatalogList({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {isLoading ? Array.from({ length: pageSize }, (_, index) => (
-            <TableRow key={`loading-${index}`}>
-              <TableCell colSpan={5} className="py-4">
-                <Skeleton className="h-8 w-full rounded-sm" />
-              </TableCell>
-            </TableRow>
-          )) : error ? (
-            <TableRow><TableCell colSpan={5} className="h-24 text-center text-sm text-rose-700">Could not load {title.toLowerCase()}: {error}</TableCell></TableRow>
+          {error ? (
+            <TableRow><TableCell colSpan={5} className="h-24 text-center text-xs text-rose-700">Could not load {title.toLowerCase()}: {error}</TableCell></TableRow>
           ) : entries.map((entry) => (
             <TableRow key={entry.id} className="group">
               <CatalogEntryCells entry={entry} onUpdateCategory={onUpdateEntry} />
@@ -507,10 +506,10 @@ function CatalogList({
               <CatalogStatusCell entry={entry} onUpdateCategory={onUpdateEntry} />
             </TableRow>
           ))}
-          {!isLoading && !error && entries.length === 0 && (
+          {!error && entries.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="h-28 text-center">
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-xs font-medium text-slate-700">
                   {searchTerm.trim() ? `No ${title.toLowerCase()} match “${searchTerm.trim()}”` : `No ${singular}s found`}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
@@ -611,7 +610,7 @@ function CatalogEntryCells({
           <Input
             autoFocus
             aria-label={`Edit ${entry.name} name`}
-            className="h-9 min-w-32 rounded-sm border-slate-300 text-sm"
+            className="h-9 min-w-32 rounded-sm border-slate-300 text-xs"
             disabled={isSaving}
             maxLength={80}
             onBlur={() => void saveField()}
@@ -645,10 +644,10 @@ function CatalogEntryCells({
               src={entry.imageUrl}
               alt={`${entry.name} category`}
               loading="lazy"
-              className="size-10 rounded-sm border border-slate-200 object-cover"
+              className="size-11 rounded-md border border-slate-200 object-cover"
             />
           ) : (
-            <span className="grid size-10 place-items-center rounded-sm border border-slate-200 bg-slate-50 text-slate-500">
+            <span className="grid size-11 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-500">
               <ImagePlus className="size-4" aria-hidden="true" />
             </span>
           )}
@@ -659,7 +658,7 @@ function CatalogEntryCells({
           <textarea
             autoFocus
             aria-label={`Edit ${entry.name} description`}
-            className="min-h-20 w-full min-w-48 resize-y rounded-sm border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 disabled:bg-slate-50"
+            className="min-h-20 w-full min-w-48 resize-y rounded-sm border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 disabled:bg-slate-50"
             disabled={isSaving}
             maxLength={500}
             onBlur={() => void saveField()}
@@ -710,7 +709,7 @@ function CatalogStatusCell({
       {isEditable ? (
         <select
           aria-label={`${entry.name} status`}
-          className="h-9 rounded-sm border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 disabled:opacity-60"
+          className="h-9 rounded-sm border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 disabled:opacity-60"
           disabled={isSaving}
           onChange={(event) => void updateStatus(event.target.value)}
           value={isDeleted ? "true" : "false"}

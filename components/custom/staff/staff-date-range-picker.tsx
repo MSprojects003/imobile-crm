@@ -95,7 +95,7 @@ export function StaffDateRangePicker({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={togglePicker}
-        className="h-10 w-full justify-between gap-3 border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 sm:min-w-48 sm:w-auto"
+        className="h-9 w-full justify-between gap-2 border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 sm:min-w-44 sm:w-auto"
       >
         <span className="flex min-w-0 items-center gap-2">
           <CalendarDays className="size-4 shrink-0 text-slate-500" aria-hidden="true" />

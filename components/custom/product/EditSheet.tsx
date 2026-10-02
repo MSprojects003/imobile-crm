@@ -108,9 +108,9 @@ const PRESET_COLORS = [
 ];
 
 const inputClass =
-  "h-10 rounded-md border-slate-200 px-3 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
+  "h-10 rounded-md border-slate-200 px-3 text-xs md:text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
 const textareaClass =
-  "min-h-20 resize-y rounded-md border-slate-200 px-3 py-2.5 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
+  "min-h-20 resize-y rounded-md border-slate-200 px-3 py-2.5 text-xs md:text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20";
 
 function sameHex(first: string, second: string) {
   return first.toLowerCase() === second.toLowerCase();
@@ -128,7 +128,7 @@ function Section({
   return (
     <section className="space-y-4 border-b border-slate-100 px-5 py-6 last:border-b-0 sm:px-6">
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <h3 className="text-xs font-semibold text-slate-900">{title}</h3>
         {description ? (
           <p className="mt-0.5 text-xs leading-5 text-slate-500">
             {description}
@@ -611,10 +611,10 @@ export function EditSheet({
     >
       <SheetContent
         side="right"
-        className="flex h-dvh min-h-0 w-screen flex-col gap-0 overflow-hidden p-0 sm:!max-w-xl"
+        className="flex h-dvh min-h-0 w-screen flex-col gap-0 overflow-hidden p-0 sm:!max-w-lg"
       >
         <SheetHeader className="shrink-0 gap-1.5 border-b border-slate-200 bg-white px-5 py-4 pr-14 sm:px-6 sm:pr-14">
-          <SheetTitle className="text-lg font-semibold text-slate-950">
+          <SheetTitle className="text-sm text-slate-950">
             Edit product
           </SheetTitle>
           <SheetDescription className="truncate text-xs">
@@ -634,7 +634,7 @@ export function EditSheet({
                 <Section title="Product information">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <label className="space-y-1.5">
-                      <span className="text-[13px] font-medium text-slate-700">
+                      <span className="text-xs font-medium text-slate-700">
                         Product name
                       </span>
                       <Input
@@ -655,7 +655,7 @@ export function EditSheet({
                       ) : null}
                     </label>
                     <label className="space-y-1.5">
-                      <span className="text-[13px] font-medium text-slate-700">
+                      <span className="text-xs font-medium text-slate-700">
                         SKU
                       </span>
                       <Input
@@ -679,7 +679,7 @@ export function EditSheet({
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-3">
-                      <label className="text-[13px] font-medium text-slate-700">
+                      <label className="text-xs font-medium text-slate-700">
                         Model numbers
                       </label>
                       <Button
@@ -764,7 +764,7 @@ export function EditSheet({
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <label className="space-y-1.5">
-                      <span className="text-[13px] font-medium text-slate-700">
+                      <span className="text-xs font-medium text-slate-700">
                         Model{" "}
                         <span className="font-normal text-slate-400">
                           Optional
@@ -792,7 +792,7 @@ export function EditSheet({
                       ) : null}
                     </label>
                     <label className="space-y-1.5">
-                      <span className="text-[13px] font-medium text-slate-700">
+                      <span className="text-xs font-medium text-slate-700">
                         Manufactured year{" "}
                         <span className="font-normal text-slate-400">
                           Optional
@@ -830,7 +830,7 @@ export function EditSheet({
                       ] as const
                     ).map(([fieldName, label, options]) => (
                       <label key={fieldName} className="space-y-1.5">
-                        <span className="text-[13px] font-medium text-slate-700">
+                        <span className="text-xs font-medium text-slate-700">
                           {label}
                         </span>
                         <Controller
@@ -853,7 +853,7 @@ export function EditSheet({
                               }}
                               disabled={catalogLoading}
                             >
-                              <SelectTrigger className="h-10 w-full text-sm">
+                              <SelectTrigger className="h-10 w-full text-xs">
                                 <SelectValue placeholder="Select" />
                               </SelectTrigger>
                               <SelectContent>
@@ -1086,7 +1086,7 @@ export function EditSheet({
                               <label
                                 key={color.hex}
                                 htmlFor={id}
-                                className={`flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-[13px] ${
+                                className={`flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-xs ${
                                   checked
                                     ? "border-[#ed1c2e]/40 bg-rose-50/50"
                                     : "border-slate-200 hover:bg-slate-50"
@@ -1126,7 +1126,7 @@ export function EditSheet({
                             type="button"
                             aria-expanded={pickerOpen}
                             onClick={() => setPickerOpen((current) => !current)}
-                            className="flex items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-600 hover:border-[#ed1c2e]/50 hover:text-[#ed1c2e]"
+                            className="flex items-center gap-2 rounded-md border border-dashed border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 hover:border-[#ed1c2e]/50 hover:text-[#ed1c2e]"
                           >
                             <Palette className="size-4" aria-hidden="true" />
                             Custom color
@@ -1148,7 +1148,7 @@ export function EditSheet({
                               <HexColorInput
                                 color={pickerColor}
                                 onChange={setPickerColor}
-                                className="h-9 min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 text-sm uppercase outline-none focus-visible:border-[#ed1c2e]"
+                                className="h-9 min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 text-xs uppercase outline-none focus-visible:border-[#ed1c2e]"
                                 aria-label="Custom color hex value"
                               />
                               <Button
@@ -1247,7 +1247,7 @@ export function EditSheet({
                             <Icon className="size-4" aria-hidden="true" />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block text-[13px] font-semibold text-slate-900">
+                            <span className="block text-xs font-semibold text-slate-900">
                               {label}
                             </span>
                             <span className="mt-0.5 block text-xs leading-5 text-slate-500">
@@ -1273,7 +1273,7 @@ export function EditSheet({
                     <div className="space-y-1.5 sm:max-w-72">
                       <label
                         htmlFor="edit-fixed-price"
-                        className="text-[13px] font-medium text-slate-700"
+                        className="text-xs font-medium text-slate-700"
                       >
                         Unit price (LKR)
                       </label>
@@ -1366,7 +1366,7 @@ export function EditSheet({
                                 <span className="block text-[11px] font-medium text-slate-500 sm:hidden">
                                   From qty
                                 </span>
-                                <span className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-sm text-slate-600 tabular-nums sm:px-3">
+                                <span className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs text-slate-600 tabular-nums sm:px-3">
                                   {tiers[index]?.startQty ?? field.startQty}
                                   <input
                                     type="hidden"
@@ -1451,7 +1451,7 @@ export function EditSheet({
                         size="sm"
                         disabled={!canAddTier}
                         onClick={addTier}
-                        className="gap-1.5 text-[13px]"
+                        className="gap-1.5 text-xs"
                       >
                         <Plus className="size-4" aria-hidden="true" />
                         Add price tier
@@ -1471,7 +1471,7 @@ export function EditSheet({
             {formError ? (
               <p
                 role="alert"
-                className="shrink-0 px-5 pt-3 text-sm text-rose-700 sm:px-6"
+                className="shrink-0 px-5 pt-3 text-xs text-rose-700 sm:px-6"
               >
                 {formError}
               </p>
@@ -1479,7 +1479,7 @@ export function EditSheet({
             <div
               role="status"
               aria-live="polite"
-              className="flex min-h-12 shrink-0 items-center gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 text-sm sm:px-6"
+              className="flex min-h-12 shrink-0 items-center gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs sm:px-6"
             >
               {saving ? (
                 <>

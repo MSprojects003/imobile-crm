@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
+import { PageHeading } from "@/components/custom/dashboard/page-heading"
 import { createStaff, fetchStaff, updateStaffStatus, type CreateStaffInput, type StaffList } from "@/lib/staff"
 
 const staffQueryKey = ["staff"]
@@ -102,13 +103,17 @@ export function StaffWorkspace() {
 
   return (
     <section className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-6">
-      <section aria-label="Staff filters" className="space-y-3">
+      <PageHeading
+        title="Reps (Staffs)"
+        description="Manage staff profiles, status, and joining dates."
+      />
+      <section aria-label="Staff filters" className="space-y-2">
         <div className="flex flex-row items-center justify-between gap-2 sm:gap-3">
           <label className="relative block min-w-0 flex-1 sm:max-w-xs lg:max-w-sm">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
             <Input
               aria-label="Search staff"
-              className="h-10 rounded-md border-slate-200 bg-white pl-9 pr-10 text-sm focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+              className="h-9 rounded-md border-slate-200 bg-white pl-9 pr-10 text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
               onChange={(event) => {
                 setSearch(event.target.value)
                 setPage(1)
@@ -154,16 +159,15 @@ export function StaffWorkspace() {
               </Button>
             )}
           </div>
-          <div className="flex flex-col gap-3 sm:order-2 sm:ml-auto sm:flex-row sm:items-center">
-            <label className="text-xs font-medium text-slate-600" htmlFor="staff-status-filter">Status</label>
-            <Select
+          <div className="flex flex-row gap-3 sm:order-2 sm:ml-auto sm:flex-row sm:items-center">
+             <Select
               value={statusFilter}
               onValueChange={(value: string | null) => {
                 setStatusFilter((value ?? "all") as StatusFilter)
                 setPage(1)
               }}
             >
-              <SelectTrigger id="staff-status-filter" aria-label="Filter staff by status" className="h-10 w-full sm:w-36">
+              <SelectTrigger id="staff-status-filter" aria-label="Filter staff by status" className="h-9 w-full text-xs sm:w-32">
                 <SelectValue>
                   {(value) => value === "active" ? "Active" : value === "deactive" ? "Deactive" : "All status"}
                 </SelectValue>

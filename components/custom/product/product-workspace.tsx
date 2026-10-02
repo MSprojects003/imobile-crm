@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer";
+import { PageHeading } from "@/components/custom/dashboard/page-heading";
 import { AddDiscountSheet } from "@/components/custom/product/add-discount-sheet";
 import { AddProductSheet } from "@/components/custom/product/add-product-sheet";
 import { EditSheet } from "@/components/custom/product/EditSheet";
@@ -261,9 +262,10 @@ export function ProductWorkspace() {
   return (
     <section className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-6">
       <div className="sticky -top-6 z-20 -mx-5 -mt-5 flex flex-col gap-3 border-b border-slate-200 bg-background/95 px-5 py-3 backdrop-blur sm:-mx-8 sm:-mt-8 sm:px-8 sm:py-4">
-        <p className="text-xs font-semibold text-slate-500 uppercase">
-          iMobile workspace
-        </p>
+        <PageHeading
+          title="Products"
+          description="Manage your product catalog, pricing, and availability."
+        />
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <label className="relative block w-full lg:max-w-sm">
             <Search
@@ -272,7 +274,7 @@ export function ProductWorkspace() {
             />
             <Input
               aria-label="Search products"
-              className="h-10 rounded-md border-slate-200 bg-white pl-9 text-sm"
+              className="h-9 rounded-md border-slate-200 bg-white pl-9 text-xs"
               onChange={(event) => {
                 setSearch(event.target.value);
                 setPage(1);
@@ -291,7 +293,7 @@ export function ProductWorkspace() {
             >
               <SelectTrigger
                 aria-label="Filter by category"
-                className="h-9 w-36 min-w-0 text-sm"
+                className="h-8 w-32 min-w-0 text-xs"
               >
                 <SelectValue>
                   {(value) => (value === "all" ? "All categories" : value)}
@@ -315,7 +317,7 @@ export function ProductWorkspace() {
             >
               <SelectTrigger
                 aria-label="Filter by brand"
-                className="h-9 w-32 min-w-0 text-sm"
+                className="h-8 w-28 min-w-0 text-xs"
               >
                 <SelectValue>
                   {(value) => (value === "all" ? "All brands" : value)}

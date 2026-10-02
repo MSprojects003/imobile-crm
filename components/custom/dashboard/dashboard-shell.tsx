@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { AssignWorkSheet } from "@/components/custom/dashboard/assign-work-sheet"
 import { AppSidebar } from "@/components/custom/dashboard/app-sidebar"
@@ -39,6 +40,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const currentPage = pageTitles[pathname.split("/").filter(Boolean).at(-1) ?? ""] ?? "Home"
+  const isAssetPage = [
+    "/dashboard/products",
+    "/dashboard/categories",
+    "/dashboard/brands",
+  ].includes(pathname)
   const hasStickyTableFooter = [
     "/dashboard/products",
     "/dashboard/categories",
@@ -79,8 +85,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <SidebarInset className="h-svh min-h-0 overflow-hidden">
         <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
           <SidebarTrigger aria-label="Toggle navigation" />
-          <div className="h-5 w-px bg-border" />
-          <Breadcrumb>
+          <div className="hidden h-5 w-px bg-border md:block" />
+          <Link
+            href="/dashboard"
+            aria-label="iMobile dashboard"
+            className="absolute left-1/2 -translate-x-1/2 md:hidden"
+          >
+            <Image
+              src="/imobile.webp"
+              alt="iMobile Supreme"
+              width={130}
+              height={42}
+              priority
+              className="h-auto w-[110px] object-contain"
+            />
+          </Link>
+          <Breadcrumb className="hidden md:block">
             <BreadcrumbList>
               {currentPage === "Dashboard" ? (
                 <BreadcrumbItem>
@@ -92,6 +112,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     <BreadcrumbLink render={<Link href="/dashboard" />}>Dashboard</BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
+                  {isAssetPage && (
+                    <>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink render={<Link href="/dashboard/products" />}>Asset</BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                    </>
+                  )}
                   <BreadcrumbItem>
                     <BreadcrumbPage>{currentPage}</BreadcrumbPage>
                   </BreadcrumbItem>

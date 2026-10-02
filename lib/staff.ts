@@ -25,6 +25,7 @@ export type CreateStaffInput = {
   nic: string
   address: string
   role: string
+  accountType: "staff" | "sub_admin"
 }
 
 async function getAccessToken() {

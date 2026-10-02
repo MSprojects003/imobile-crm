@@ -11,142 +11,9 @@ import {
 	Store,
 } from "lucide-react"
 
-import { supabase } from "@/lib/supabase"
 import { Skeleton } from "@/components/ui/skeleton"
-
-type DashboardStats = {
-	shops: number
-	sales: number
-	products: number
-	salesAmount: number | null
-	trends: Record<StatKey, MetricTrend | null>
-}
-
-type StatKey = "shops" | "sales" | "products" | "salesAmount"
-type MetricTrend = { direction: "up" | "down" | "flat"; label: string }
-type CountTable = "shops" | "products" | "orders"
-
-function makeTrend(current: number | null, previous: number | null): MetricTrend | null {
-	if (current === null || previous === null) return null
-	if (previous === 0) {
-		return current === 0
-			? { direction: "flat", label: "No change in 30 days" }
-			: { direction: "up", label: "New in the last 30 days" }
-	}
-
-	const change = ((current - previous) / previous) * 100
-	const direction = change > 0 ? "up" : change < 0 ? "down" : "flat"
-	return {
-		direction,
-		label: `${Math.abs(change).toFixed(1)}% vs previous 30 days`,
-	}
-}
-
-async function fetchPeriodCount(
-	table: CountTable,
-	from: string,
-	to: string,
-): Promise<number | null> {
-	const { count, error } = await supabase
-		.from(table)
-		.select("*", { count: "exact", head: true })
-		.gte("created_at", from)
-		.lt("created_at", to)
-
-	return error ? null : count ?? 0
-}
-
-async function fetchPeriodAmount(from: string, to: string): Promise<number | null> {
-	let amount = 0
-	let offset = 0
-	const pageSize = 1000
-
-	while (true) {
-		const { data, error } = await supabase
-			.from("orders")
-			.select("total_amount")
-			.gte("created_at", from)
-			.lt("created_at", to)
-			.range(offset, offset + pageSize - 1)
-
-		if (error) return null
-
-		for (const order of data ?? []) {
-			const orderAmount = Number(order.total_amount)
-			if (Number.isFinite(orderAmount)) amount += orderAmount
-		}
-
-		if ((data?.length ?? 0) < pageSize) return amount
-		offset += pageSize
-	}
-}
-
-async function fetchDashboardStats(): Promise<DashboardStats> {
-	const now = new Date()
-	const currentStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-	const previousStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
-	const currentFrom = currentStart.toISOString()
-	const previousFrom = previousStart.toISOString()
-	const currentTo = now.toISOString()
-
-	const [shopsResult, productsResult, salesResult] = await Promise.all([
-		supabase.from("shops").select("*", { count: "exact", head: true }),
-		supabase.from("products").select("*", { count: "exact", head: true }),
-		supabase.from("orders").select("*", { count: "exact", head: true }),
-	])
-
-	if (shopsResult.error) throw shopsResult.error
-	if (productsResult.error) throw productsResult.error
-	if (salesResult.error) throw salesResult.error
-
-	let salesAmount: number | null = 0
-	let offset = 0
-	const pageSize = 1000
-
-	while (salesAmount !== null) {
-		const { data, error } = await supabase
-			.from("orders")
-			.select("total_amount")
-			.range(offset, offset + pageSize - 1)
-
-		if (error) {
-			salesAmount = null
-			break
-		}
-
-		for (const order of data ?? []) {
-			const amount = Number(order.total_amount)
-			if (Number.isFinite(amount)) salesAmount += amount
-		}
-
-		if ((data?.length ?? 0) < pageSize) break
-		offset += pageSize
-	}
-
-	const [shopsCurrent, shopsPrevious, productsCurrent, productsPrevious, salesCurrent, salesPrevious, amountCurrent, amountPrevious] = await Promise.all([
-		fetchPeriodCount("shops", currentFrom, currentTo),
-		fetchPeriodCount("shops", previousFrom, currentFrom),
-		fetchPeriodCount("products", currentFrom, currentTo),
-		fetchPeriodCount("products", previousFrom, currentFrom),
-		fetchPeriodCount("orders", currentFrom, currentTo),
-		fetchPeriodCount("orders", previousFrom, currentFrom),
-		fetchPeriodAmount(currentFrom, currentTo),
-		fetchPeriodAmount(previousFrom, currentFrom),
-	])
-
-	return {
-		shops: shopsResult.count ?? 0,
-		sales: salesResult.count ?? 0,
-		products: productsResult.count ?? 0,
-		salesAmount,
-		trends: {
-			shops: makeTrend(shopsCurrent, shopsPrevious),
-			sales: makeTrend(salesCurrent, salesPrevious),
-			products: makeTrend(productsCurrent, productsPrevious),
-			salesAmount: makeTrend(amountCurrent, amountPrevious),
-		},
-	}
-}
+import { fetchDashboardStats } from "@/lib/stat-card-client"
+import type { StatKey } from "@/lib/api/stat.card"
 
 const numberFormatter = new Intl.NumberFormat("en-LK")
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
@@ -157,7 +24,7 @@ const currencyFormatter = new Intl.NumberFormat("en-LK", {
 
 const statsCards = [
 	{
-		label: "Total Shops",
+		label: "Shops (last 30 days)",
 		key: "shops",
 		icon: Store,
 		color: "bg-rose-50 text-rose-700",
@@ -169,7 +36,7 @@ const statsCards = [
 		color: "bg-sky-50 text-sky-700",
 	},
 	{
-		label: "Total Products",
+		label: "Products (last 30 days)",
 		key: "products",
 		icon: Package,
 		color: "bg-emerald-50 text-emerald-700",
@@ -184,7 +51,7 @@ const statsCards = [
 
 export function StatsCards() {
 	const { data, isPending, isError, refetch } = useQuery({
-		queryKey: ["dashboard", "stats"],
+		queryKey: ["dashboard", "stats", "rolling-30-day-comparison"],
 		queryFn: fetchDashboardStats,
 		staleTime: 60_000,
 	})
@@ -222,10 +89,10 @@ export function StatsCards() {
 						>
 							<div className="flex items-start justify-between gap-2 sm:gap-3">
 								<div className="min-w-0">
-										<h2 className="truncate text-sm font-medium text-slate-600">
+										<h2 className="truncate text-xs font-medium text-slate-600">
 										{stat.label}
 									</h2>
-										<div className="mt-1.5 min-h-7 break-words text-lg font-semibold tabular-nums text-slate-950 sm:mt-2 sm:text-2xl xl:text-[28px]">
+										<div className="mt-1.5 min-h-7 break-words text-base font-semibold tabular-nums text-slate-950 sm:mt-2 sm:text-xl xl:text-2xl">
 										{isPending ? (
 													<Skeleton className="h-6 w-20 rounded-sm sm:h-7" />
 										) : isError ? (
@@ -240,15 +107,15 @@ export function StatsCards() {
 								</span>
 							</div>
 							<div className={`mt-2 flex min-h-6 items-center gap-1 border-t border-slate-100 pt-1.5 text-[10px] leading-4 sm:mt-3 sm:min-h-7 sm:gap-1.5 sm:pt-2 sm:text-xs ${trend ? trendColor : "text-slate-500"}`}>
-								<TrendIcon className="size-3.5 shrink-0" aria-hidden="true" />
-								<span>{isError ? "Check your database access" : trend?.label ?? "Trend unavailable"}</span>
+								{trend && <TrendIcon className="size-3.5 shrink-0" aria-hidden="true" />}
+								<span>{isError ? "Check your database access" : trend?.label ?? "—"}</span>
 							</div>
 						</article>
 					)
 				})}
 			</div>
 			{isError && (
-				<div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-rose-700" role="status">
+				<div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-rose-700" role="status">
 					<span>Dashboard totals could not be loaded from Supabase.</span>
 					<button
 						className="font-semibold underline underline-offset-4 hover:text-rose-900"
@@ -258,11 +125,6 @@ export function StatsCards() {
 						Try again
 					</button>
 				</div>
-			)}
-			{!isError && data?.salesAmount === null && (
-				<p className="mt-4 text-xs text-slate-500" role="status">
-					Sales amount is unavailable. Confirm that the orders table has a total_amount column and that your account can read it.
-				</p>
 			)}
 		</section>
 	)

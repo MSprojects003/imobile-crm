@@ -70,7 +70,7 @@ function Card({
       <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3.5 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <Icon className="size-4 shrink-0 text-slate-500" aria-hidden="true" />
-          <h3 className="truncate text-[13px] font-semibold text-slate-900">
+          <h3 className="truncate text-xs font-semibold text-slate-900">
             {title}
           </h3>
         </div>
@@ -92,7 +92,7 @@ function InfoRow({
   return (
     <div className="flex items-baseline justify-between gap-4 px-3.5 py-2.5">
       <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="min-w-0 text-right text-sm font-medium break-words text-slate-900">
+      <dd className="min-w-0 text-right text-xs font-medium break-words text-slate-900">
         {value}
       </dd>
     </div>
@@ -139,7 +139,7 @@ export function ViewProductSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-dvh min-h-0 flex-col gap-0 overflow-hidden p-0 !w-screen sm:!max-w-md"
+        className="flex h-dvh min-h-0 flex-col gap-0 overflow-hidden p-0 !w-screen sm:!max-w-sm"
       >
         {/* ------------------------------- Header ------------------------------- */}
         <SheetHeader className="shrink-0 gap-1.5 border-b border-slate-200 bg-white px-4 py-4 pr-12 sm:px-5 sm:pr-14">
@@ -161,7 +161,7 @@ export function ViewProductSheet({
               </Badge>
             ) : null}
           </div>
-          <SheetTitle className="line-clamp-2 text-lg leading-6 font-semibold text-slate-950 sm:text-xl sm:leading-7">
+          <SheetTitle className="line-clamp-2 text-sm leading-5 text-slate-950">
             {product?.name ?? "Product details"}
           </SheetTitle>
           <SheetDescription className="flex min-w-0 items-center gap-1.5 text-xs">
@@ -264,17 +264,17 @@ export function ViewProductSheet({
                           key={`${tier.startQty}-${tier.endQty}-${index}`}
                           className="grid grid-cols-[1fr_1fr] gap-3 px-3.5 py-2.5 odd:bg-white even:bg-slate-50/70"
                         >
-                          <span className="text-sm text-slate-700 tabular-nums">
+                          <span className="text-xs text-slate-700 tabular-nums">
                             {tier.startQty} – {tier.endQty ?? "No limit"}
                           </span>
-                          <span className="text-right text-sm font-semibold text-slate-900 tabular-nums">
+                          <span className="text-right text-xs font-semibold text-slate-900 tabular-nums">
                             {currencyFormatter.format(tier.price)}
                           </span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="px-3.5 py-3 text-sm text-slate-500">
+                    <p className="px-3.5 py-3 text-xs text-slate-500">
                       No bulk price tiers available.
                     </p>
                   )}
@@ -283,7 +283,7 @@ export function ViewProductSheet({
                 <div className="flex items-end justify-between gap-3 px-3.5 py-3.5">
                   <div>
                     <p className="text-xs text-slate-500">Fixed unit price</p>
-                    <p className="mt-0.5 text-2xl font-semibold text-slate-950 tabular-nums">
+                    <p className="mt-0.5 text-lg font-semibold text-slate-950 tabular-nums">
                       {currencyFormatter.format(
                         product.fixedPrice ?? product.price,
                       )}
@@ -363,7 +363,7 @@ export function ViewProductSheet({
             {/* Description */}
             {product.description?.trim() ? (
               <Card icon={AlignLeft} title="Description">
-                <p className="p-3.5 text-sm leading-6 whitespace-pre-wrap text-slate-700">
+                <p className="p-3.5 text-xs leading-5 whitespace-pre-wrap text-slate-700">
                   {product.description.trim()}
                 </p>
               </Card>
@@ -384,7 +384,7 @@ export function ViewProductSheet({
                   {specifications.map((specification, index) => (
                     <li
                       key={`${specification}-${index}`}
-                      className="flex gap-2.5 px-3.5 py-2.5 text-sm leading-5 text-slate-700 odd:bg-white even:bg-slate-50/70"
+                      className="flex gap-2.5 px-3.5 py-2.5 text-xs leading-5 text-slate-700 odd:bg-white even:bg-slate-50/70"
                     >
                       <span
                         aria-hidden="true"

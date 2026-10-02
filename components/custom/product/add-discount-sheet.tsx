@@ -40,12 +40,12 @@ export function AddDiscountSheet({ product, open, onOpenChange, onApply }: AddDi
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-md">
         <SheetHeader className="border-b border-slate-200 px-5 py-5 sm:px-6">
-          <SheetTitle className="text-lg font-semibold">Add discount</SheetTitle>
+          <SheetTitle>Add discount</SheetTitle>
           <SheetDescription>{product?.name}</SheetDescription>
         </SheetHeader>
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
           <div className="flex-1 space-y-3 px-5 py-6 sm:px-6">
-            <label htmlFor="product-discount" className="text-sm font-medium text-slate-800">Discount percentage</label>
+            <label htmlFor="product-discount" className="text-[13px] font-medium text-slate-800">Discount percentage</label>
             <div className="relative">
               <Input
                 id="product-discount"
@@ -57,9 +57,9 @@ export function AddDiscountSheet({ product, open, onOpenChange, onApply }: AddDi
                 value={discountInput}
                 onChange={(event) => setDiscountInput(event.target.value)}
                 placeholder="10"
-                className="h-10 rounded-md border-slate-200 pr-10 text-sm"
+                className="h-10 rounded-md border-slate-200 pr-10 text-[13px]"
               />
-              <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-slate-500">%</span>
+              <span className="absolute top-1/2 right-3 -translate-y-1/2 text-[13px] text-slate-500">%</span>
             </div>
             <p className="text-xs leading-5 text-slate-500">Enter a value from 1% to 90%. The product price updates in this sample view.</p>
           </div>

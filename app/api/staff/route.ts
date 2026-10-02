@@ -28,7 +28,7 @@ function createStaffId(rows: Array<{ staff_id: string }>) {
 async function getStaffIdValues(adminClient: Awaited<ReturnType<typeof createAdminClient>>) {
   const [staffResult, profilesResult] = await Promise.all([
     adminClient.from("staff").select("staff_id"),
-    adminClient.from("users").select("username").eq("is_rep", true),
+    adminClient.from("users").select("username"),
   ])
 
   if (staffResult.error) return { values: null, error: staffResult.error }
@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
   const nic = typeof input.nic === "string" ? input.nic.trim() : ""
   const address = typeof input.address === "string" ? input.address.trim() : ""
   const role = typeof input.role === "string" ? input.role.trim() : ""
+  const accountType = input.accountType
 
   if (!fullName || fullName.length > 255) {
     return NextResponse.json({ error: "Enter a staff name up to 255 characters." }, { status: 400 })
@@ -164,6 +165,9 @@ export async function POST(request: NextRequest) {
   if (nic.length > 32) return NextResponse.json({ error: "NIC must be 32 characters or fewer." }, { status: 400 })
   if (address.length > 500) return NextResponse.json({ error: "Address must be 500 characters or fewer." }, { status: 400 })
   if (!role || role.length > 80) return NextResponse.json({ error: "Enter a staff role up to 80 characters." }, { status: 400 })
+  if (accountType !== "staff" && accountType !== "sub_admin") {
+    return NextResponse.json({ error: "Choose Staff or Sub Admin as the account type." }, { status: 400 })
+  }
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const staffIds = await getStaffIdValues(authorization.adminClient)
@@ -180,8 +184,8 @@ export async function POST(request: NextRequest) {
         username: staffId,
         phone,
         is_admin: false,
-        is_sub_admin: false,
-        is_rep: true,
+        is_sub_admin: accountType === "sub_admin",
+        is_rep: accountType === "staff",
         is_shop: false,
         status: true,
       })
