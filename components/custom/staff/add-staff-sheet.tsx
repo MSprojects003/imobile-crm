@@ -14,6 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Eye, EyeOff } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { CreateStaffInput } from "@/lib/staff"
 
@@ -40,6 +41,9 @@ export function AddStaffSheet({
   const [address, setAddress] = useState("")
   const [role, setRole] = useState("")
   const [accountType, setAccountType] = useState<StaffAccountType>("staff")
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -49,12 +53,17 @@ export function AddStaffSheet({
     setAddress("")
     setRole("")
     setAccountType("staff")
+    setUsername("")
+    setPassword("")
+    setShowPassword(false)
   }, [open])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!phone) return
-    await onSubmit({ fullName, phone, nic, address, role, accountType })
+    const customUsername = accountType === "sub_admin" && username ? username : undefined
+    const customPassword = accountType === "sub_admin" && password ? password : undefined
+    await onSubmit({ fullName, phone, nic, address, role, accountType, username: customUsername, password: customPassword })
   }
 
   return (
@@ -179,6 +188,59 @@ export function AddStaffSheet({
                 />
               </div>
             </div>
+
+            {accountType === "sub_admin" && (
+              <>
+                <hr className="my-6 border-slate-200" />
+                <div>
+                  <h3 className="mb-4 text-xs font-semibold text-slate-800 uppercase tracking-wide">Authentication</h3>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="staff-username" className="text-xs font-medium text-slate-800">
+                        Username <span className="font-normal text-slate-500">(optional)</span>
+                      </label>
+                      <Input
+                        id="staff-username"
+                        autoComplete="off"
+                        maxLength={100}
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder={nextStaffId}
+                        value={username}
+                        className="h-10 rounded-md border-slate-200 px-3 text-xs md:text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+                      />
+                      <p className="text-[10px] text-slate-500">Leave blank to use the Staff ID as username.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label htmlFor="staff-password" className="text-xs font-medium text-slate-800">Password</label>
+                      <div className="relative">
+                        <Input
+                          id="staff-password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="new-password"
+                          minLength={8}
+                          maxLength={64}
+                          onChange={(event) => setPassword(event.target.value)}
+                          placeholder="Enter a secure password"
+                          required
+                          value={password}
+                          className="h-10 rounded-md border-slate-200 pr-10 pl-3 text-xs md:text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-slate-500">At least 8 characters. Will be sent via SMS.</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <SheetFooter className="flex-row justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:px-6">

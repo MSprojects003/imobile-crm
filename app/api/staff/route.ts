@@ -1,7 +1,7 @@
 import "server-only"
 
 import { NextRequest, NextResponse } from "next/server"
-import { authorizeActiveAdmin, createAdminClient } from "@/lib/admin-auth"
+import { authorizeDashboardRequest } from "@/lib/admin-auth"
 
 type StaffRow = {
   id: string
@@ -23,6 +23,43 @@ function createStaffId(rows: Array<{ staff_id: string }>) {
   }, 0)
 
   return `S${String(highestNumber + 1).padStart(4, "0")}`
+}
+
+async function sendSubAdminSms(phone: string, fullName: string, username: string, password: string) {
+  const { NOTIFY_LK_API_KEY, NOTIFY_LK_USER_ID, NOTIFY_LK_SENDER_ID } = process.env
+  if (!NOTIFY_LK_API_KEY || !NOTIFY_LK_USER_ID || !NOTIFY_LK_SENDER_ID) {
+    console.error("Notify.lk is not configured, skipping SMS.")
+    return
+  }
+
+  const messageText = `iMobile Supreme - New Staff Credentials
+
+Welcome ${fullName},
+
+Your credentials:
+Username: ${username}
+Password: ${password}
+
+Don't share these credentials with anyone.`
+
+  try {
+    const response = await fetch("https://app.notify.lk/api/v1/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        user_id: NOTIFY_LK_USER_ID,
+        api_key: NOTIFY_LK_API_KEY,
+        sender_id: NOTIFY_LK_SENDER_ID,
+        to: phone.replace(/\D/g, ""),
+        message: messageText,
+      }),
+      cache: "no-store",
+    })
+    const responseText = await response.text()
+    console.log("Notify.lk response:", responseText)
+  } catch (error) {
+    console.error("Notify.lk SMS sending failed:", error)
+  }
 }
 
 async function getStaffIdValues(adminClient: Awaited<ReturnType<typeof createAdminClient>>) {
@@ -59,21 +96,8 @@ function serializeStaff(row: StaffRow) {
   }
 }
 
-async function getAuthorizedAdmin(request: NextRequest) {
-  let adminClient
-  try {
-    adminClient = createAdminClient()
-  } catch {
-    return { authorized: false as const, response: NextResponse.json({ error: "Supabase server configuration is missing." }, { status: 500 }) }
-  }
-
-  const authorization = await authorizeActiveAdmin(request, adminClient)
-  if (!authorization.authorized) return authorization
-  return { authorized: true as const, adminClient }
-}
-
 export async function GET(request: NextRequest) {
-  const authorization = await getAuthorizedAdmin(request)
+  const authorization = await authorizeDashboardRequest(request, "viewStaff")
   if (!authorization.authorized) return authorization.response
 
   const { data, error } = await authorization.adminClient
@@ -98,7 +122,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const authorization = await getAuthorizedAdmin(request)
+  const authorization = await authorizeDashboardRequest(request, "updateStaff")
   if (!authorization.authorized) return authorization.response
 
   const id = request.nextUrl.searchParams.get("id")
@@ -135,7 +159,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authorization = await getAuthorizedAdmin(request)
+  const authorization = await authorizeDashboardRequest(request, "addStaff")
   if (!authorization.authorized) return authorization.response
 
   let body: unknown
@@ -177,11 +201,35 @@ export async function POST(request: NextRequest) {
     }
 
     const staffId = createStaffId(staffIds.values ?? [])
+    const finalUsername = accountType === "sub_admin" && typeof input.username === "string" && input.username.trim() ? input.username.trim() : staffId
+    const password = typeof input.password === "string" ? input.password : ""
+
+    if (accountType === "sub_admin" && password.length < 8) {
+      return NextResponse.json({ error: "Sub Admin password must be at least 8 characters long." }, { status: 400 })
+    }
+
+    if (accountType === "sub_admin") {
+      const { error: authError } = await authorization.adminClient.auth.admin.createUser({
+        phone,
+        password,
+        phone_confirm: true,
+        user_metadata: { username: finalUsername, role: "sub_admin" },
+      })
+
+      if (authError) {
+        if (authError.code === "phone_exists") {
+          return NextResponse.json({ error: "This phone is already registered as a login account." }, { status: 409 })
+        }
+        console.error("Sub Admin Auth creation failed", { code: authError.code, message: authError.message })
+        return NextResponse.json({ error: "Could not create the login account in Supabase Auth." }, { status: 500 })
+      }
+    }
+
     const { data: user, error: userError } = await authorization.adminClient
       .from("users")
       .insert({
         full_name: fullName,
-        username: staffId,
+        username: finalUsername,
         phone,
         is_admin: false,
         is_sub_admin: accountType === "sub_admin",
@@ -221,6 +269,10 @@ export async function POST(request: NextRequest) {
       }
       console.error("Staff insert failed", { code: insertError.code })
       return NextResponse.json({ error: "Could not create the staff record." }, { status: 500 })
+    }
+
+    if (accountType === "sub_admin") {
+      await sendSubAdminSms(phone, fullName, finalUsername, password)
     }
 
     return NextResponse.json({

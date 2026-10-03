@@ -1,22 +1,15 @@
 import "server-only"
 
 import { NextRequest, NextResponse } from "next/server"
-import { authorizeActiveAdmin, createAdminClient } from "@/lib/admin-auth"
+import { authorizeDashboardRequest } from "@/lib/admin-auth"
 import { getShops } from "@/lib/api/shops"
 
 export async function GET(request: NextRequest) {
-  let adminClient
-  try {
-    adminClient = createAdminClient()
-  } catch {
-    return NextResponse.json({ error: "Supabase server configuration is missing." }, { status: 500 })
-  }
-
-  const authorization = await authorizeActiveAdmin(request, adminClient)
+  const authorization = await authorizeDashboardRequest(request, "viewShops")
   if (!authorization.authorized) return authorization.response
 
   try {
-    const shops = await getShops(adminClient)
+    const shops = await getShops(authorization.adminClient)
     return NextResponse.json({ shops })
   } catch (error) {
     const code = typeof error === "object" && error !== null && "code" in error
@@ -28,14 +21,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  let adminClient
-  try {
-    adminClient = createAdminClient()
-  } catch {
-    return NextResponse.json({ error: "Supabase server configuration is missing." }, { status: 500 })
-  }
-
-  const authorization = await authorizeActiveAdmin(request, adminClient)
+  const authorization = await authorizeDashboardRequest(request, "updateShops")
   if (!authorization.authorized) return authorization.response
 
   const id = request.nextUrl.searchParams.get("id")
@@ -51,7 +37,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Choose an active or deactive status." }, { status: 400 })
   }
 
-  const { data, error } = await adminClient
+  const { data, error } = await authorization.adminClient
     .from("shops")
     .update({
       is_active: (body as { isActive: boolean }).isActive,

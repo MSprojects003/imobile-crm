@@ -34,6 +34,8 @@ import {
 import type { Product } from "@/components/custom/product/product-data";
 import type { ProductEdit, ProductFieldEdit } from "@/lib/api/products";
 import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton";
+import { useCanPerform } from "@/components/custom/dashboard/current-user";
+import { RestrictedAction } from "@/components/custom/dashboard/restricted-action";
 
 type ProductTableProps = {
   products: Product[];
@@ -103,11 +105,20 @@ function EditableCell({
   const [draft, setDraft] = useState(String(getFieldValue(product, field)));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const canEdit = useCanPerform("editProducts");
 
   function cancelEdit() {
     setDraft(String(getFieldValue(product, field)));
     setError("");
     setEditing(false);
+  }
+
+  if (!canEdit) {
+    return (
+      <div className={`min-w-0 ${align === "right" ? "text-right" : "text-left"} truncate px-2 py-1.5 text-[13px]`}>
+        {displayValue || <span className="text-slate-400">Empty</span>}
+      </div>
+    );
   }
 
   async function saveEdit() {
@@ -304,13 +315,15 @@ function RowActions({
           className="z-[120]"
         >
           <Menu.Popup className="min-w-44 rounded-md border border-slate-200 bg-white p-1 text-slate-800 shadow-lg outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95">
-            <Menu.Item
-              onClick={() => onEditProduct(product)}
-              className={itemClass}
-            >
-              <Pencil className="size-4 text-slate-500" aria-hidden="true" />
-              Edit
-            </Menu.Item>
+            <RestrictedAction action="editProducts">
+              <Menu.Item
+                onClick={() => onEditProduct(product)}
+                className={itemClass}
+              >
+                <Pencil className="size-4 text-slate-500" aria-hidden="true" />
+                Edit
+              </Menu.Item>
+            </RestrictedAction>
             <Menu.Item
               onClick={() => onViewDetails(product)}
               className={itemClass}

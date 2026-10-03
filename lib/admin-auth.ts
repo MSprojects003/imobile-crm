@@ -3,6 +3,14 @@ import "server-only"
 import { NextRequest, NextResponse } from "next/server"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
+import {
+  ADMIN_ONLY_ACTION_MESSAGE,
+  canPerformDashboardAction,
+  getDashboardRole,
+  type DashboardAction,
+  type DashboardRole,
+} from "@/lib/user-limits"
+
 function normalizeSriLankanPhone(phone: string) {
   const digits = phone.replace(/\D/g, "")
   if (digits.startsWith("0094")) return `+${digits.slice(2)}`
@@ -21,16 +29,31 @@ export function createAdminClient() {
   })
 }
 
-export async function authorizeActiveAdmin(request: NextRequest, adminClient: SupabaseClient) {
+type AuthorizedDashboardUser = {
+  authorized: true
+  response: null
+  role: DashboardRole
+}
+
+type UnauthorizedDashboardUser = {
+  authorized: false
+  response: NextResponse
+  role?: never
+}
+
+export async function authorizeDashboardUser(
+  request: NextRequest,
+  adminClient: SupabaseClient,
+): Promise<AuthorizedDashboardUser | UnauthorizedDashboardUser> {
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]
   if (!token) {
-    return { authorized: false as const, response: NextResponse.json({ error: "Sign in is required." }, { status: 401 }) }
+    return { authorized: false, response: NextResponse.json({ error: "Sign in is required." }, { status: 401 }) }
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   if (!supabaseUrl || !publishableKey) {
-    return { authorized: false as const, response: NextResponse.json({ error: "Supabase client configuration is missing." }, { status: 500 }) }
+    return { authorized: false, response: NextResponse.json({ error: "Supabase client configuration is missing." }, { status: 500 }) }
   }
 
   const authClient = createClient(supabaseUrl, publishableKey, {
@@ -38,27 +61,78 @@ export async function authorizeActiveAdmin(request: NextRequest, adminClient: Su
   })
   const { data: authData, error: authError } = await authClient.auth.getUser(token)
   if (authError || !authData.user?.phone) {
-    return { authorized: false as const, response: NextResponse.json({ error: "Your session is invalid or has expired." }, { status: 401 }) }
+    return { authorized: false, response: NextResponse.json({ error: "Your session is invalid or has expired." }, { status: 401 }) }
   }
 
-  const { data: adminProfiles, error: profileError } = await adminClient
+  const { data: profiles, error: profileError } = await adminClient
     .from("users")
-    .select("phone")
+    .select("phone, is_admin, is_sub_admin")
     .eq("status", true)
-    .eq("is_admin", true)
+    .or("is_admin.eq.true,is_sub_admin.eq.true")
 
   if (profileError) {
-    return { authorized: false as const, response: NextResponse.json({ error: "Could not verify admin access." }, { status: 500 }) }
+    return { authorized: false, response: NextResponse.json({ error: "Could not verify dashboard access." }, { status: 500 }) }
   }
 
   const normalizedAuthPhone = normalizeSriLankanPhone(authData.user.phone)
-  const isAdmin = adminProfiles?.some((profile) =>
-    profile.phone && normalizeSriLankanPhone(profile.phone) === normalizedAuthPhone
+  const profile = profiles?.find((candidate) =>
+    candidate.phone && normalizeSriLankanPhone(candidate.phone) === normalizedAuthPhone
   )
+  const role = getDashboardRole({
+    isAdmin: Boolean(profile?.is_admin),
+    isSubAdmin: Boolean(profile?.is_sub_admin),
+  })
 
-  if (!isAdmin) {
-    return { authorized: false as const, response: NextResponse.json({ error: "Admin access is required." }, { status: 403 }) }
+  if (!role) {
+    return { authorized: false, response: NextResponse.json({ error: "Admin access is required." }, { status: 403 }) }
   }
 
-  return { authorized: true as const, response: null }
+  return { authorized: true, response: null, role }
+}
+
+export async function authorizeDashboardAction(
+  request: NextRequest,
+  adminClient: SupabaseClient,
+  action: DashboardAction,
+) {
+  const authorization = await authorizeDashboardUser(request, adminClient)
+  if (!authorization.authorized) return authorization
+  if (!canPerformDashboardAction(authorization.role, action)) {
+    return {
+      authorized: false as const,
+      response: NextResponse.json({ error: ADMIN_ONLY_ACTION_MESSAGE }, { status: 403 }),
+    }
+  }
+  return authorization
+}
+
+export async function authorizeDashboardRequest(
+  request: NextRequest,
+  action: DashboardAction,
+) {
+  let adminClient
+  try {
+    adminClient = createAdminClient()
+  } catch {
+    return {
+      authorized: false as const,
+      response: NextResponse.json({ error: "Supabase server configuration is missing." }, { status: 500 }),
+    }
+  }
+
+  const authorization = await authorizeDashboardAction(request, adminClient, action)
+  if (!authorization.authorized) return authorization
+  return { authorized: true as const, adminClient, role: authorization.role }
+}
+
+export async function authorizeActiveAdmin(request: NextRequest, adminClient: SupabaseClient) {
+  const authorization = await authorizeDashboardUser(request, adminClient)
+  if (!authorization.authorized) return authorization
+  if (authorization.role !== "admin") {
+    return {
+      authorized: false as const,
+      response: NextResponse.json({ error: ADMIN_ONLY_ACTION_MESSAGE }, { status: 403 }),
+    }
+  }
+  return authorization
 }

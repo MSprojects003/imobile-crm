@@ -6,6 +6,10 @@ import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { AssignWorkSheet } from "@/components/custom/dashboard/assign-work-sheet"
 import { AppSidebar } from "@/components/custom/dashboard/app-sidebar"
+import {
+  NotificationsBellButton,
+  NotificationsProvider,
+} from "@/components/custom/dashboard/Notifications"
 import { DashboardSessionSkeleton } from "@/components/custom/dashboard/dashboard-skeleton"
 import {
   Breadcrumb,
@@ -81,63 +85,66 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="h-svh min-h-0 overflow-hidden">
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
-          <SidebarTrigger aria-label="Toggle navigation" />
-          <div className="hidden h-5 w-px bg-border md:block" />
-          <Link
-            href="/dashboard"
-            aria-label="iMobile dashboard"
-            className="absolute left-1/2 -translate-x-1/2 md:hidden"
+      <NotificationsProvider>
+        <AppSidebar />
+        <SidebarInset className="h-svh min-h-0 overflow-hidden">
+          <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
+            <SidebarTrigger aria-label="Toggle navigation" />
+            <div className="hidden h-5 w-px bg-border md:block" />
+            <Link
+              href="/dashboard"
+              aria-label="iMobile dashboard"
+              className="absolute left-1/2 -translate-x-1/2 md:hidden"
+            >
+              <Image
+                src="/imobile.webp"
+                alt="iMobile Supreme"
+                width={130}
+                height={42}
+                priority
+                className="h-auto w-[110px] object-contain"
+              />
+            </Link>
+            <Breadcrumb className="hidden md:block">
+              <BreadcrumbList>
+                {currentPage === "Dashboard" ? (
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                  </BreadcrumbItem>
+                ) : (
+                  <>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink render={<Link href="/dashboard" />}>Dashboard</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    {isAssetPage && (
+                      <>
+                        <BreadcrumbItem>
+                          <BreadcrumbLink render={<Link href="/dashboard/products" />}>Asset</BreadcrumbLink>
+                        </BreadcrumbItem>
+                        <BreadcrumbSeparator />
+                      </>
+                    )}
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>{currentPage}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="ml-auto flex items-center gap-1">
+              <NotificationsBellButton />
+              <AssignWorkSheet />
+            </div>
+          </header>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto bg-background p-5 sm:p-8"
+            style={{ paddingBottom: hasStickyTableFooter ? 0 : undefined }}
           >
-            <Image
-              src="/imobile.webp"
-              alt="iMobile Supreme"
-              width={130}
-              height={42}
-              priority
-              className="h-auto w-[110px] object-contain"
-            />
-          </Link>
-          <Breadcrumb className="hidden md:block">
-            <BreadcrumbList>
-              {currentPage === "Dashboard" ? (
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                </BreadcrumbItem>
-              ) : (
-                <>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink render={<Link href="/dashboard" />}>Dashboard</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  {isAssetPage && (
-                    <>
-                      <BreadcrumbItem>
-                        <BreadcrumbLink render={<Link href="/dashboard/products" />}>Asset</BreadcrumbLink>
-                      </BreadcrumbItem>
-                      <BreadcrumbSeparator />
-                    </>
-                  )}
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>{currentPage}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              )}
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="ml-auto">
-            <AssignWorkSheet />
+            {children}
           </div>
-        </header>
-        <div
-          className="min-h-0 flex-1 overflow-y-auto bg-background p-5 sm:p-8"
-          style={{ paddingBottom: hasStickyTableFooter ? 0 : undefined }}
-        >
-          {children}
-        </div>
-      </SidebarInset>
+        </SidebarInset>
+      </NotificationsProvider>
     </SidebarProvider>
   )
 }

@@ -5,7 +5,6 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
-  Bell,
   Boxes,
   ChevronsUpDown,
   ClipboardList,
@@ -19,7 +18,7 @@ import {
 } from "lucide-react"
 import { Menu } from "@base-ui/react/menu"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Accordion,
   AccordionContent,
@@ -44,6 +43,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { supabase } from "@/lib/supabase"
+import { truncatePhone } from "@/lib/user-limits"
+import { NotificationsMenuItem } from "./Notifications"
+import { AccountSheet } from "@/components/custom/dashboard/AccountSheet"
 
 const navigationItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -52,12 +54,24 @@ const navigationItems = [
   { title: "Orders", href: "/dashboard/orders", icon: ClipboardList },
 ]
 
+type SidebarProfile = {
+  fullName: string
+  username: string
+  phone: string
+  imageUrl: string | null
+  isAdmin?: boolean
+  isSubAdmin?: boolean
+}
+
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { isMobile, setOpenMobile } = useSidebar()
   const isProductsSection = ["/dashboard/products", "/dashboard/categories", "/dashboard/brands"].includes(pathname)
   const [expandedGroups, setExpandedGroups] = useState<string[]>(isProductsSection ? ["products"] : [])
+  const [profile, setProfile] = useState<SidebarProfile | null>(null)
+  const [profileError, setProfileError] = useState(false)
+  const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false)
 
   function closeMobileSidebar() {
     if (isMobile) setOpenMobile(false)
@@ -66,6 +80,54 @@ export function AppSidebar() {
   useEffect(() => {
     if (isProductsSection) setExpandedGroups(["products"])
   }, [isProductsSection])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProfile() {
+      try {
+        const { data, error } = await supabase.auth.getSession()
+        if (error) throw error
+        if (!data.session) throw new Error("Sign in is required to load your account profile.")
+
+        const response = await fetch("/api/auth", {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+          cache: "no-store",
+        })
+        const result = await response.json() as {
+          profile?: SidebarProfile
+          error?: string
+        }
+        if (!response.ok || !result.profile) {
+          throw new Error(result.error ?? "Could not load your account profile.")
+        }
+
+        if (isMounted) setProfile(result.profile)
+      } catch (error) {
+        console.error("Sidebar account profile could not be loaded", error)
+        if (isMounted) setProfileError(true)
+      }
+    }
+
+    void loadProfile()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const profileInitial = (profile?.username ?? "").trim().charAt(0).toUpperCase() ||
+      "?"
+    const profileDetails = profile
+      ? (
+        <span className="flex items-center gap-1.5">
+          {truncatePhone(profile.phone)}
+          {profile.isAdmin && <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-emerald-700 uppercase">Admin</span>}
+          {profile.isSubAdmin && !profile.isAdmin && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold tracking-wide text-amber-700 uppercase">Sub Admin</span>}
+        </span>
+      )
+      : profileError
+        ? "Profile unavailable"
+        : "Loading profile..."
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -132,8 +194,10 @@ export function AppSidebar() {
                       <SidebarMenuSub className="mx-4 gap-1 border-slate-200 px-3 py-1">
                         {[
                           { title: "Products", href: "/dashboard/products", icon: Package },
-                          { title: "Categories", href: "/dashboard/categories", icon: Boxes },
-                          { title: "Brands", href: "/dashboard/brands", icon: Tags },
+                          ...(profile?.isSubAdmin && !profile?.isAdmin ? [] : [
+                            { title: "Categories", href: "/dashboard/categories", icon: Boxes },
+                            { title: "Brands", href: "/dashboard/brands", icon: Tags },
+                          ])
                         ].map((item) => (
                           <SidebarMenuSubItem key={item.href}>
                             <SidebarMenuSubButton
@@ -165,50 +229,54 @@ export function AppSidebar() {
             className="flex h-14 w-full items-center gap-3 rounded-md px-2.5 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 data-popup-open:bg-slate-100 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
             <Avatar className="size-9 ring-1 ring-slate-200" aria-hidden="true">
+              {profile?.imageUrl && <AvatarImage src={profile.imageUrl} alt={profile.fullName} />}
               <AvatarFallback className="bg-[#fbe7e8] text-sm font-semibold text-[#c82432]">
-                A
+                {profileInitial}
               </AvatarFallback>
             </Avatar>
             <span className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
-              <span className="truncate text-sm font-semibold text-slate-800">Admin</span>
-              <span className="truncate text-xs text-slate-500">Workspace account</span>
+              <span className="truncate text-sm font-semibold text-slate-800">{profile?.username ?? "Account"}</span>
+              <span className="truncate text-xs text-slate-500">{profileDetails}</span>
             </span>
             <ChevronsUpDown className="size-4 text-slate-500 group-data-[collapsible=icon]:hidden" />
           </Menu.Trigger>
           <Menu.Portal>
-            <Menu.Positioner side="right" align="end" sideOffset={8} className="z-50">
-              <Menu.Popup className="w-60 rounded-lg border border-slate-200 bg-white p-1.5 text-slate-800 shadow-lg outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95">
+            <Menu.Positioner
+              side={isMobile ? "top" : "right"}
+              align={isMobile ? "start" : "end"}
+              sideOffset={8}
+              className="z-[120]"
+            >
+              <Menu.Popup
+                data-account-menu
+                className="w-60 rounded-lg border border-slate-200 bg-white p-1.5 text-slate-800 shadow-lg outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95"
+              >
                 <div className="flex items-center gap-3 px-3 py-3">
                   <Avatar className="size-9 ring-1 ring-slate-200" aria-hidden="true">
+                    {profile?.imageUrl && <AvatarImage src={profile.imageUrl} alt={profile.fullName} />}
                     <AvatarFallback className="bg-[#fbe7e8] text-sm font-semibold text-[#c82432]">
-                      A
+                      {profileInitial}
                     </AvatarFallback>
                   </Avatar>
                   <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm font-semibold">Admin</span>
-                    <span className="truncate text-xs text-slate-500">Workspace account</span>
+                    <span className="truncate text-sm font-semibold">{profile?.username ?? "Account"}</span>
+                    <span className="truncate text-xs text-slate-500">{profileDetails}</span>
                   </span>
                 </div>
                 <div className="my-1 border-t border-slate-100" />
-                <Menu.LinkItem
-                  href="/dashboard/account"
-                  closeOnClick
-                  onClick={closeMobileSidebar}
-                  className="flex h-10 items-center gap-3 rounded-md px-3 text-sm outline-none transition-colors hover:bg-slate-100 focus-visible:bg-slate-100 data-highlighted:bg-slate-100"
+                <Menu.Item
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setIsAccountSheetOpen(true)
+                    closeMobileSidebar()
+                  }}
+                  className="flex h-10 items-center gap-3 rounded-md px-3 text-sm outline-none transition-colors hover:bg-slate-100 focus-visible:bg-slate-100 data-highlighted:bg-slate-100 cursor-pointer"
                 >
                   <CircleUserRound className="size-4 text-slate-500" />
                   Account
-                </Menu.LinkItem>
-                <Menu.LinkItem
-                  href="/dashboard/notifications"
-                  closeOnClick
-                  onClick={closeMobileSidebar}
-                  className="flex h-10 items-center gap-3 rounded-md px-3 text-sm outline-none transition-colors hover:bg-slate-100 focus-visible:bg-slate-100 data-highlighted:bg-slate-100"
-                >
-                  <Bell className="size-4 text-slate-500" />
-                  Notifications
-                </Menu.LinkItem>
-                <div className="my-1 border-t border-slate-100" />
+                </Menu.Item>
+                                <NotificationsMenuItem />
+                                <div className="my-1 border-t border-slate-100" />
                 <Menu.Item
                   onClick={handleSignOut}
                   className="flex h-10 w-full cursor-default items-center gap-3 rounded-md px-3 text-sm text-[#c82432] outline-none transition-colors hover:bg-red-50 focus-visible:bg-red-50 data-highlighted:bg-red-50"
@@ -221,6 +289,7 @@ export function AppSidebar() {
           </Menu.Portal>
         </Menu.Root>
       </SidebarFooter>
+      <AccountSheet open={isAccountSheetOpen} onOpenChange={setIsAccountSheetOpen} />
     </Sidebar>
   )
 }

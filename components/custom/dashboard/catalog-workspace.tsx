@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
 import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton"
+import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
 import { supabase } from "@/lib/supabase"
 
 type CatalogTab = "categories" | "brands"
@@ -346,15 +347,17 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
                   </button>
                 )}
               </label>
-              <Button
-                type="button"
-                onClick={openAddSheet}
-                className="h-9 shrink-0 gap-2 bg-[#ed1c2e] px-3 text-xs text-white hover:bg-[#d91829] md:ml-auto"
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Add {tabDetails[activeTab].singular}</span>
-                <span className="sm:hidden">Add</span>
-              </Button>
+              <RestrictedAction action={activeTab === "categories" ? "addCategory" : "addBrands"}>
+                <Button
+                  type="button"
+                  onClick={openAddSheet}
+                  className="h-9 shrink-0 gap-2 bg-[#ed1c2e] px-3 text-xs text-white hover:bg-[#d91829] md:ml-auto"
+                >
+                  <Plus className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Add {tabDetails[activeTab].singular}</span>
+                  <span className="sm:hidden">Add</span>
+                </Button>
+              </RestrictedAction>
             </div>
             <span className="whitespace-nowrap text-xs tabular-nums text-slate-500 sm:hidden">{filteredEntries.length} items</span>
           </div>

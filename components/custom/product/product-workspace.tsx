@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer";
 import { PageHeading } from "@/components/custom/dashboard/page-heading";
+import { RestrictedAction } from "@/components/custom/dashboard/restricted-action";
 import { AddDiscountSheet } from "@/components/custom/product/add-discount-sheet";
 import { AddProductSheet } from "@/components/custom/product/add-product-sheet";
 import { EditSheet } from "@/components/custom/product/EditSheet";
@@ -363,15 +364,17 @@ export function ProductWorkspace() {
         onPageChange={setPage}
       />
 
-      <Button
-        type="button"
-        onClick={() => setAddProductOpen(true)}
-        aria-label="Add product"
-        title="Add product"
-        className="fixed right-5 bottom-5 z-10 grid size-16 place-items-center rounded-md bg-[#ed1c2e] p-0 text-white shadow-lg shadow-red-900/20 transition-transform hover:scale-105 hover:bg-[#d91829] focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/40 focus-visible:ring-offset-2 sm:right-8 sm:bottom-8 sm:size-[4.5rem]"
-      >
-        <PackagePlus className="size-7" aria-hidden="true" />
-      </Button>
+      <RestrictedAction action="addProducts">
+        <Button
+          type="button"
+          onClick={() => setAddProductOpen(true)}
+          aria-label="Add product"
+          title="Add product"
+          className="fixed right-5 bottom-5 z-10 grid size-16 place-items-center rounded-md bg-[#ed1c2e] p-0 text-white shadow-lg shadow-red-900/20 transition-transform hover:scale-105 hover:bg-[#d91829] focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/40 focus-visible:ring-offset-2 sm:right-8 sm:bottom-8 sm:size-[4.5rem]"
+        >
+          <PackagePlus className="size-7" aria-hidden="true" />
+        </Button>
+      </RestrictedAction>
 
       <AddProductSheet
         open={addProductOpen}

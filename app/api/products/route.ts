@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { authorizeActiveAdmin, createAdminClient } from "@/lib/admin-auth";
+import { authorizeDashboardRequest } from "@/lib/admin-auth";
 import type { ProductPriceTier, ProductPricingType } from "@/lib/api/products";
 
 const productSelection =
@@ -72,26 +72,8 @@ function isPriceTier(value: unknown): value is ProductPriceTier {
   );
 }
 
-async function getAuthorizedAdmin(request: NextRequest) {
-  let adminClient;
-  try {
-    adminClient = createAdminClient();
-  } catch {
-    return {
-      authorized: false as const,
-      response: NextResponse.json(
-        { error: "Supabase server configuration is missing." },
-        { status: 500 },
-      ),
-    };
-  }
-  const authorization = await authorizeActiveAdmin(request, adminClient);
-  if (!authorization.authorized) return authorization;
-  return { authorized: true as const, adminClient };
-}
-
 export async function GET(request: NextRequest) {
-  const authorization = await getAuthorizedAdmin(request);
+  const authorization = await authorizeDashboardRequest(request, "viewProducts");
   if (!authorization.authorized) return authorization.response;
 
   const { data, error } = await authorization.adminClient

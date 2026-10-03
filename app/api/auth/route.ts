@@ -550,3 +550,60 @@ export async function POST(request: NextRequest) {
   }
   return NextResponse.json({ error: "Invalid request." }, { status: 400 })
 }
+
+export async function GET(request: NextRequest) {
+  const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]
+  if (!token) {
+    return NextResponse.json({ error: "Sign in is required." }, { status: 401 })
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const secretKey = process.env.SUPABASE_SECRET_KEY
+  if (!supabaseUrl || !publishableKey || !secretKey) {
+    return NextResponse.json({ error: "Supabase is not configured on the server." }, { status: 500 })
+  }
+
+  const authClient = createClient(supabaseUrl, publishableKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data: authData, error: authError } = await authClient.auth.getUser(token)
+  if (authError || !authData.user?.phone) {
+    return NextResponse.json({ error: "Your session is invalid or has expired." }, { status: 401 })
+  }
+
+  const adminClient = createClient(supabaseUrl, secretKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  const { data: profiles, error: profileError } = await adminClient
+    .from("users")
+    .select("full_name, username, phone, profile_image_url, is_admin, is_sub_admin")
+    .eq("status", true)
+    .or("is_admin.eq.true,is_sub_admin.eq.true")
+
+  if (profileError) {
+    return NextResponse.json({ error: "Could not load your account profile." }, { status: 500 })
+  }
+
+  const normalizedAuthPhone = normalizeSriLankanPhone(authData.user.phone)
+  const profile = profiles?.find((candidate) =>
+    candidate.phone &&
+    (candidate.is_admin || candidate.is_sub_admin) &&
+    normalizeSriLankanPhone(candidate.phone) === normalizedAuthPhone
+  )
+
+  if (!profile) {
+    return NextResponse.json({ error: "An active account profile could not be found." }, { status: 403 })
+  }
+
+  return NextResponse.json({
+    profile: {
+      fullName: profile.full_name,
+      username: profile.username,
+      phone: profile.phone,
+      imageUrl: profile.profile_image_url,
+      isAdmin: Boolean(profile.is_admin),
+      isSubAdmin: Boolean(profile.is_sub_admin),
+    },
+  })
+}

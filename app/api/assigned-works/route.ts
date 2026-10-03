@@ -1,28 +1,12 @@
 import "server-only"
 
 import { NextRequest, NextResponse } from "next/server"
-import { authorizeActiveAdmin, createAdminClient } from "@/lib/admin-auth"
+import { authorizeDashboardRequest } from "@/lib/admin-auth"
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-async function getAuthorizedAdmin(request: NextRequest) {
-  let adminClient
-  try {
-    adminClient = createAdminClient()
-  } catch {
-    return {
-      authorized: false as const,
-      response: NextResponse.json({ error: "Supabase server configuration is missing." }, { status: 500 }),
-    }
-  }
-
-  const authorization = await authorizeActiveAdmin(request, adminClient)
-  if (!authorization.authorized) return authorization
-  return { authorized: true as const, adminClient }
-}
-
 export async function GET(request: NextRequest) {
-  const authorization = await getAuthorizedAdmin(request)
+  const authorization = await authorizeDashboardRequest(request, "assignWork")
   if (!authorization.authorized) return authorization.response
 
   const [staffResult, shopsResult] = await Promise.all([
@@ -59,7 +43,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authorization = await getAuthorizedAdmin(request)
+  const authorization = await authorizeDashboardRequest(request, "assignWork")
   if (!authorization.authorized) return authorization.response
 
   let body: unknown

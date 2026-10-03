@@ -20,10 +20,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   createAssignedWork,
   fetchAssignmentOptions,
 } from "@/lib/assigned-works"
+import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
 
 const workDetails = ["Shop visit", "Product audit", "Stock check", "Order delivery", "Other"]
 
@@ -79,18 +81,22 @@ export function AssignWorkSheet() {
     }
   }
 
+  const isLoadingOptions = optionsQuery.isPending
+
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        aria-label="Assign work"
-        className="h-9 gap-2 border-[#ed1c2e] bg-[#ed1c2e] px-2 text-white hover:border-[#d91829] hover:bg-[#d91829] sm:border-slate-200 sm:bg-transparent sm:px-3 sm:text-slate-700 sm:hover:bg-slate-50"
-        onClick={() => setOpen(true)}
-      >
-        <UserPlus className="size-4" aria-hidden="true" />
-        <span className="hidden sm:inline">Assign</span>
-      </Button>
+      <RestrictedAction action="assignWork">
+        <Button
+          type="button"
+          variant="ghost"
+          aria-label="Assign work"
+          className="size-10 px-0 text-slate-600 hover:text-slate-900 sm:h-9 sm:w-auto sm:gap-2 sm:border sm:border-slate-200 sm:bg-transparent sm:px-3 sm:text-slate-700 sm:hover:bg-slate-50"
+          onClick={() => setOpen(true)}
+        >
+          <UserPlus className="size-5 sm:size-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Assign</span>
+        </Button>
+      </RestrictedAction>
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent
@@ -110,7 +116,10 @@ export function AssignWorkSheet() {
           </SheetHeader>
 
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-6 sm:px-6">
+            <div
+              className="flex-1 space-y-5 overflow-y-auto px-5 py-6 sm:px-6"
+              aria-busy={isLoadingOptions}
+            >
               {formError && (
                 <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700" role="alert">
                   {formError}
@@ -126,50 +135,61 @@ export function AssignWorkSheet() {
                   {optionsQuery.error instanceof Error ? optionsQuery.error.message : "Could not load assignment options."}
                 </p>
               )}
+
               <div className="space-y-2">
                 <label className="text-xs font-medium text-slate-800" htmlFor="assign-rep">
                   Staff
                 </label>
-                <Select
-                  value={staffId || null}
-                  onValueChange={(value: string | null) => {
-                    setStaffId(value ?? "")
-                    setFormError("")
-                  }}
-                >
-                  <SelectTrigger id="assign-rep" className="h-9 w-full min-w-0 text-xs">
-                    <SelectValue placeholder={optionsQuery.isPending ? "Loading staff..." : "Select staff"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(optionsQuery.data?.staff ?? []).map((member) => (
-                      <SelectItem key={member.id} value={member.id} className="text-xs">
-                        {member.fullName} ({member.staffId})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoadingOptions ? (
+                  <Skeleton className="h-9 w-full" />
+                ) : (
+                  <Select
+                    value={staffId || null}
+                    onValueChange={(value: string | null) => {
+                      setStaffId(value ?? "")
+                      setFormError("")
+                    }}
+                  >
+                    <SelectTrigger id="assign-rep" className="h-9 w-full min-w-0 text-xs">
+                      <SelectValue placeholder="Select staff" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(optionsQuery.data?.staff ?? []).map((member) => (
+                        <SelectItem key={member.id} value={member.id} className="text-xs">
+                          {member.fullName} ({member.staffId})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-slate-800" htmlFor="assign-work">
                   Work details
                 </label>
-                <Select
-                  value={work || null}
-                  onValueChange={(value: string | null) => {
-                    setWork(value ?? "")
-                    setFormError("")
-                  }}
-                >
-                  <SelectTrigger id="assign-work" className="h-9 w-full min-w-0 text-xs">
-                    <SelectValue placeholder="Select work details" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workDetails.map((option) => (
-                      <SelectItem key={option} value={option} className="text-xs">{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoadingOptions ? (
+                  <Skeleton className="h-9 w-full" />
+                ) : (
+                  <Select
+                    value={work || null}
+                    onValueChange={(value: string | null) => {
+                      setWork(value ?? "")
+                      setFormError("")
+                    }}
+                  >
+                    <SelectTrigger id="assign-work" className="h-9 w-full min-w-0 text-xs">
+                      <SelectValue placeholder="Select work details" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workDetails.map((option) => (
+                        <SelectItem key={option} value={option} className="text-xs">
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {work === "Other" && (
@@ -196,32 +216,49 @@ export function AssignWorkSheet() {
                 <label className="text-xs font-medium text-slate-800" htmlFor="assign-shop">
                   Shop
                 </label>
-                <Select
-                  value={shopId || null}
-                  onValueChange={(value: string | null) => {
-                    setShopId(value ?? "")
-                    setFormError("")
-                  }}
-                >
-                  <SelectTrigger id="assign-shop" className="h-9 w-full min-w-0 text-xs">
-                    <SelectValue placeholder={optionsQuery.isPending ? "Loading shops..." : "Select a shop"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(optionsQuery.data?.shops ?? []).map((shop) => (
-                      <SelectItem key={shop.id} value={shop.id} className="text-xs">{shop.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoadingOptions ? (
+                  <Skeleton className="h-9 w-full" />
+                ) : (
+                  <Select
+                    value={shopId || null}
+                    onValueChange={(value: string | null) => {
+                      setShopId(value ?? "")
+                      setFormError("")
+                    }}
+                  >
+                    <SelectTrigger id="assign-shop" className="h-9 w-full min-w-0 text-xs">
+                      <SelectValue placeholder="Select a shop" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(optionsQuery.data?.shops ?? []).map((shop) => (
+                        <SelectItem key={shop.id} value={shop.id} className="text-xs">
+                          {shop.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
             <SheetFooter className="flex-row justify-end border-t border-slate-200 bg-white px-5 py-4 sm:px-6">
-              <Button type="button" variant="outline" disabled={createMutation.isPending} onClick={() => handleOpenChange(false)} className="text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={createMutation.isPending}
+                onClick={() => handleOpenChange(false)}
+                className="text-xs"
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending || optionsQuery.isLoading || !optionsQuery.data?.staff.length || !optionsQuery.data?.shops.length}
+                disabled={
+                  createMutation.isPending ||
+                  isLoadingOptions ||
+                  !optionsQuery.data?.staff.length ||
+                  !optionsQuery.data?.shops.length
+                }
                 className="bg-[#ed1c2e] text-xs text-white hover:bg-[#d91829]"
               >
                 {createMutation.isPending ? "Assigning..." : "Assign work"}
@@ -230,8 +267,13 @@ export function AssignWorkSheet() {
           </form>
         </SheetContent>
       </Sheet>
+
       {toastMessage && (
-        <div role="status" aria-live="polite" className="fixed right-4 bottom-4 z-[120] rounded-md border border-emerald-200 bg-white px-4 py-3 text-xs font-medium text-emerald-800 shadow-lg sm:right-8 sm:bottom-8">
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed right-4 bottom-4 z-[120] rounded-md border border-emerald-200 bg-white px-4 py-3 text-xs font-medium text-emerald-800 shadow-lg sm:right-8 sm:bottom-8"
+        >
           {toastMessage}
         </div>
       )}

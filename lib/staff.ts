@@ -26,6 +26,8 @@ export type CreateStaffInput = {
   address: string
   role: string
   accountType: "staff" | "sub_admin"
+  username?: string
+  password?: string
 }
 
 async function getAccessToken() {

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
 import { PageHeading } from "@/components/custom/dashboard/page-heading"
+import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
 import { createStaff, fetchStaff, updateStaffStatus, type CreateStaffInput, type StaffList } from "@/lib/staff"
 
 const staffQueryKey = ["staff"]
@@ -135,17 +136,19 @@ export function StaffWorkspace() {
               </button>
             )}
           </label>
-          <Button
-            type="button"
-            onClick={() => {
-              createMutation.reset()
-              setSheetOpen(true)
-            }}
-            className="h-10 w-auto shrink-0 gap-2 bg-[#ed1c2e] px-3 text-white hover:bg-[#d91829] sm:px-4"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            Add staff
-          </Button>
+          <RestrictedAction action="addStaff">
+            <Button
+              type="button"
+              onClick={() => {
+                createMutation.reset()
+                setSheetOpen(true)
+              }}
+              className="h-10 w-auto shrink-0 gap-2 bg-[#ed1c2e] px-3 text-white hover:bg-[#d91829] sm:px-4"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Add staff
+            </Button>
+          </RestrictedAction>
         </div>
 
         <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-slate-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">

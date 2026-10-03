@@ -181,7 +181,22 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+      <Sheet
+        open={openMobile}
+        onOpenChange={(nextOpen, eventDetails) => {
+          if (!nextOpen) {
+            const target = eventDetails.event?.target
+            if (
+              target instanceof Element &&
+              target.closest("[data-account-menu]")
+            ) {
+              return
+            }
+          }
+          setOpenMobile(nextOpen)
+        }}
+        {...props}
+      >
         <SheetContent
           dir={dir}
           data-sidebar="sidebar"
