@@ -25,8 +25,14 @@ function createStaffId(rows: Array<{ staff_id: string }>) {
   return `S${String(highestNumber + 1).padStart(4, "0")}`
 }
 
-async function sendSubAdminSms(phone: string, fullName: string, username: string, password: string) {
-  const { NOTIFY_LK_API_KEY, NOTIFY_LK_USER_ID, NOTIFY_LK_SENDER_ID } = process.env
+async function sendSubAdminSms(
+  phone: string,
+  fullName: string,
+  username: string,
+  password: string
+) {
+  const { NOTIFY_LK_API_KEY, NOTIFY_LK_USER_ID, NOTIFY_LK_SENDER_ID } =
+    process.env
   if (!NOTIFY_LK_API_KEY || !NOTIFY_LK_USER_ID || !NOTIFY_LK_SENDER_ID) {
     console.error("Notify.lk is not configured, skipping SMS.")
     return
@@ -62,7 +68,9 @@ Don't share these credentials with anyone.`
   }
 }
 
-async function getStaffIdValues(adminClient: ReturnType<typeof createAdminClient>) {
+async function getStaffIdValues(
+  adminClient: ReturnType<typeof createAdminClient>
+) {
   const [staffResult, profilesResult] = await Promise.all([
     adminClient.from("staff").select("staff_id"),
     adminClient.from("users").select("username"),
@@ -74,7 +82,9 @@ async function getStaffIdValues(adminClient: ReturnType<typeof createAdminClient
   return {
     values: [
       ...(staffResult.data ?? []),
-      ...(profilesResult.data ?? []).map((profile: { username: string }) => ({ staff_id: profile.username })),
+      ...(profilesResult.data ?? []).map((profile: { username: string }) => ({
+        staff_id: profile.username,
+      })),
     ],
     error: null,
   }
@@ -102,23 +112,34 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await authorization.adminClient
     .from("staff")
-    .select("id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)")
+    .select(
+      "id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)"
+    )
     .eq("is_deleted", false)
     .order("created_at", { ascending: false })
 
   if (error) {
     console.error("Staff list query failed", { code: error.code })
-    return NextResponse.json({ error: "Could not load staff." }, { status: 500 })
+    return NextResponse.json(
+      { error: "Could not load staff." },
+      { status: 500 }
+    )
   }
 
   const staff = (data ?? []) as unknown as StaffRow[]
   const staffIds = await getStaffIdValues(authorization.adminClient)
   if (staffIds.error) {
     console.error("Staff ID lookup failed", { code: staffIds.error.code })
-    return NextResponse.json({ error: "Could not generate the next staff ID." }, { status: 500 })
+    return NextResponse.json(
+      { error: "Could not generate the next staff ID." },
+      { status: 500 }
+    )
   }
 
-  return NextResponse.json({ staff: staff.map(serializeStaff), nextStaffId: createStaffId(staffIds.values ?? []) })
+  return NextResponse.json({
+    staff: staff.map(serializeStaff),
+    nextStaffId: createStaffId(staffIds.values ?? []),
+  })
 }
 
 export async function PATCH(request: NextRequest) {
@@ -126,16 +147,30 @@ export async function PATCH(request: NextRequest) {
   if (!authorization.authorized) return authorization.response
 
   const id = request.nextUrl.searchParams.get("id")
-  if (!id) return NextResponse.json({ error: "Staff ID is required." }, { status: 400 })
+  if (!id)
+    return NextResponse.json(
+      { error: "Staff ID is required." },
+      { status: 400 }
+    )
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid staff status update." }, { status: 400 })
+    return NextResponse.json(
+      { error: "Invalid staff status update." },
+      { status: 400 }
+    )
   }
-  if (!body || typeof body !== "object" || typeof (body as Record<string, unknown>).isActive !== "boolean") {
-    return NextResponse.json({ error: "Choose an active or deactive status." }, { status: 400 })
+  if (
+    !body ||
+    typeof body !== "object" ||
+    typeof (body as Record<string, unknown>).isActive !== "boolean"
+  ) {
+    return NextResponse.json(
+      { error: "Choose an active or deactive status." },
+      { status: 400 }
+    )
   }
 
   const { data, error } = await authorization.adminClient
@@ -146,16 +181,27 @@ export async function PATCH(request: NextRequest) {
     })
     .eq("id", id)
     .eq("is_deleted", false)
-    .select("id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)")
+    .select(
+      "id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)"
+    )
     .maybeSingle()
 
   if (error) {
     console.error("Staff status update failed", { code: error.code })
-    return NextResponse.json({ error: "Could not update staff status." }, { status: 500 })
+    return NextResponse.json(
+      { error: "Could not update staff status." },
+      { status: 500 }
+    )
   }
-  if (!data) return NextResponse.json({ error: "Staff member was not found." }, { status: 404 })
+  if (!data)
+    return NextResponse.json(
+      { error: "Staff member was not found." },
+      { status: 404 }
+    )
 
-  return NextResponse.json({ staff: serializeStaff(data as unknown as StaffRow) })
+  return NextResponse.json({
+    staff: serializeStaff(data as unknown as StaffRow),
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -166,14 +212,21 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid staff form data." }, { status: 400 })
+    return NextResponse.json(
+      { error: "Invalid staff form data." },
+      { status: 400 }
+    )
   }
   if (!body || typeof body !== "object") {
-    return NextResponse.json({ error: "Invalid staff form data." }, { status: 400 })
+    return NextResponse.json(
+      { error: "Invalid staff form data." },
+      { status: 400 }
+    )
   }
 
   const input = body as Record<string, unknown>
-  const fullName = typeof input.fullName === "string" ? input.fullName.trim() : ""
+  const fullName =
+    typeof input.fullName === "string" ? input.fullName.trim() : ""
   const phone = typeof input.phone === "string" ? input.phone.trim() : ""
   const nic = typeof input.nic === "string" ? input.nic.trim() : ""
   const address = typeof input.address === "string" ? input.address.trim() : ""
@@ -181,48 +234,98 @@ export async function POST(request: NextRequest) {
   const accountType = input.accountType
 
   if (!fullName || fullName.length > 255) {
-    return NextResponse.json({ error: "Enter a staff name up to 255 characters." }, { status: 400 })
+    return NextResponse.json(
+      { error: "Enter a staff name up to 255 characters." },
+      { status: 400 }
+    )
   }
   if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
-    return NextResponse.json({ error: "Enter a valid international phone number." }, { status: 400 })
+    return NextResponse.json(
+      { error: "Enter a valid international phone number." },
+      { status: 400 }
+    )
   }
-  if (nic.length > 32) return NextResponse.json({ error: "NIC must be 32 characters or fewer." }, { status: 400 })
-  if (address.length > 500) return NextResponse.json({ error: "Address must be 500 characters or fewer." }, { status: 400 })
-  if (!role || role.length > 80) return NextResponse.json({ error: "Enter a staff role up to 80 characters." }, { status: 400 })
+  if (nic.length > 32)
+    return NextResponse.json(
+      { error: "NIC must be 32 characters or fewer." },
+      { status: 400 }
+    )
+  if (address.length > 500)
+    return NextResponse.json(
+      { error: "Address must be 500 characters or fewer." },
+      { status: 400 }
+    )
+  if (!role || role.length > 80)
+    return NextResponse.json(
+      { error: "Enter a staff role up to 80 characters." },
+      { status: 400 }
+    )
   if (accountType !== "staff" && accountType !== "sub_admin") {
-    return NextResponse.json({ error: "Choose Staff or Sub Admin as the account type." }, { status: 400 })
+    return NextResponse.json(
+      { error: "Choose Staff or Sub Admin as the account type." },
+      { status: 400 }
+    )
   }
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const staffIds = await getStaffIdValues(authorization.adminClient)
     if (staffIds.error) {
       console.error("Staff ID lookup failed", { code: staffIds.error.code })
-      return NextResponse.json({ error: "Could not generate a staff ID." }, { status: 500 })
+      return NextResponse.json(
+        { error: "Could not generate a staff ID." },
+        { status: 500 }
+      )
     }
 
     const staffId = createStaffId(staffIds.values ?? [])
-    const finalUsername = accountType === "sub_admin" && typeof input.username === "string" && input.username.trim() ? input.username.trim() : staffId
+    const finalUsername =
+      accountType === "sub_admin" &&
+      typeof input.username === "string" &&
+      input.username.trim()
+        ? input.username.trim()
+        : staffId
     const password = typeof input.password === "string" ? input.password : ""
 
     if (accountType === "sub_admin" && password.length < 8) {
-      return NextResponse.json({ error: "Sub Admin password must be at least 8 characters long." }, { status: 400 })
+      return NextResponse.json(
+        { error: "Sub Admin password must be at least 8 characters long." },
+        { status: 400 }
+      )
     }
 
-    if (accountType === "sub_admin") {
-      const { error: authError } = await authorization.adminClient.auth.admin.createUser({
+    const { data: authUser, error: authError } =
+      await authorization.adminClient.auth.admin.createUser({
+        ...(accountType === "sub_admin" ? { password } : {}),
         phone,
-        password,
         phone_confirm: true,
-        user_metadata: { username: finalUsername, role: "sub_admin" },
+        user_metadata: {
+          username: finalUsername,
+          role: accountType === "sub_admin" ? "sub_admin" : "staff",
+        },
       })
 
-      if (authError) {
-        if (authError.code === "phone_exists") {
-          return NextResponse.json({ error: "This phone is already registered as a login account." }, { status: 409 })
-        }
-        console.error("Sub Admin Auth creation failed", { code: authError.code, message: authError.message })
-        return NextResponse.json({ error: "Could not create the login account in Supabase Auth." }, { status: 500 })
+    if (authError) {
+      if (authError.code === "phone_exists") {
+        return NextResponse.json(
+          { error: "This phone is already registered as a login account." },
+          { status: 409 }
+        )
       }
+      console.error("Staff Auth creation failed", {
+        code: authError.code,
+        message: authError.message,
+      })
+      return NextResponse.json(
+        { error: "Could not create the login account in Supabase Auth." },
+        { status: 500 }
+      )
+    }
+    if (!authUser?.user) {
+      console.error("Staff Auth creation returned no user.")
+      return NextResponse.json(
+        { error: "Could not create the login account in Supabase Auth." },
+        { status: 500 }
+      )
     }
 
     const { data: user, error: userError } = await authorization.adminClient
@@ -241,44 +344,75 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError) {
-      if (userError.code === "23505" && userError.message.includes("username")) continue
+      await authorization.adminClient.auth.admin.deleteUser(authUser.user.id)
+      if (userError.code === "23505" && userError.message.includes("username"))
+        continue
       if (userError.code === "23505") {
-        return NextResponse.json({ error: "That phone number is already assigned to a user." }, { status: 409 })
+        return NextResponse.json(
+          { error: "That phone number is already assigned to a user." },
+          { status: 409 }
+        )
       }
       console.error("Staff profile insert failed", { code: userError.code })
-      return NextResponse.json({ error: "Could not create the staff profile." }, { status: 500 })
+      return NextResponse.json(
+        { error: "Could not create the staff profile." },
+        { status: 500 }
+      )
     }
 
-    const { data: staffRecord, error: insertError } = await authorization.adminClient
-      .from("staff")
-      .insert({
-        staff_id: staffId,
-        user_id: user.id,
-        nic: nic || null,
-        address: address || null,
-        role,
-      })
-      .select("id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at")
-      .single()
+    const { data: staffRecord, error: insertError } =
+      await authorization.adminClient
+        .from("staff")
+        .insert({
+          staff_id: staffId,
+          user_id: user.id,
+          nic: nic || null,
+          address: address || null,
+          role,
+        })
+        .select(
+          "id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at"
+        )
+        .single()
 
     if (insertError) {
       await authorization.adminClient.from("users").delete().eq("id", user.id)
-      if (insertError.code === "23505" && insertError.message.includes("staff_id")) continue
+      await authorization.adminClient.auth.admin.deleteUser(authUser.user.id)
+      if (
+        insertError.code === "23505" &&
+        insertError.message.includes("staff_id")
+      )
+        continue
       if (insertError.code === "23505") {
-        return NextResponse.json({ error: "That NIC is already assigned to another staff member." }, { status: 409 })
+        return NextResponse.json(
+          { error: "That NIC is already assigned to another staff member." },
+          { status: 409 }
+        )
       }
       console.error("Staff insert failed", { code: insertError.code })
-      return NextResponse.json({ error: "Could not create the staff record." }, { status: 500 })
+      return NextResponse.json(
+        { error: "Could not create the staff record." },
+        { status: 500 }
+      )
     }
 
     if (accountType === "sub_admin") {
       await sendSubAdminSms(phone, fullName, finalUsername, password)
     }
 
-    return NextResponse.json({
-      staff: serializeStaff({ ...staffRecord, user: { full_name: fullName, phone } } as StaffRow),
-    }, { status: 201 })
+    return NextResponse.json(
+      {
+        staff: serializeStaff({
+          ...staffRecord,
+          user: { full_name: fullName, phone },
+        } as StaffRow),
+      },
+      { status: 201 }
+    )
   }
 
-  return NextResponse.json({ error: "Could not allocate a unique staff ID. Please try again." }, { status: 409 })
+  return NextResponse.json(
+    { error: "Could not allocate a unique staff ID. Please try again." },
+    { status: 409 }
+  )
 }
