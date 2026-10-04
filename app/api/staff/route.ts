@@ -1,7 +1,7 @@
 import "server-only"
 
 import { NextRequest, NextResponse } from "next/server"
-import { authorizeDashboardRequest } from "@/lib/admin-auth"
+import { authorizeDashboardRequest, createAdminClient } from "@/lib/admin-auth"
 
 type StaffRow = {
   id: string
@@ -62,7 +62,7 @@ Don't share these credentials with anyone.`
   }
 }
 
-async function getStaffIdValues(adminClient: Awaited<ReturnType<typeof createAdminClient>>) {
+async function getStaffIdValues(adminClient: ReturnType<typeof createAdminClient>) {
   const [staffResult, profilesResult] = await Promise.all([
     adminClient.from("staff").select("staff_id"),
     adminClient.from("users").select("username"),
@@ -74,7 +74,7 @@ async function getStaffIdValues(adminClient: Awaited<ReturnType<typeof createAdm
   return {
     values: [
       ...(staffResult.data ?? []),
-      ...(profilesResult.data ?? []).map((profile) => ({ staff_id: profile.username })),
+      ...(profilesResult.data ?? []).map((profile: { username: string }) => ({ staff_id: profile.username })),
     ],
     error: null,
   }

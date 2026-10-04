@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { authorizeDashboardRequest } from "@/lib/admin-auth";
+import { authorizeDashboardRequest, createAdminClient, authorizeActiveAdmin } from "@/lib/admin-auth";
 import type { ProductPriceTier, ProductPricingType } from "@/lib/api/products";
 
 const productSelection =
@@ -92,7 +92,17 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const authorization = await getAuthorizedAdmin(request);
+  let adminClient;
+  try {
+    adminClient = createAdminClient();
+  } catch {
+    return NextResponse.json(
+      { error: "Supabase server configuration is missing." },
+      { status: 500 },
+    );
+  }
+
+  const authorization = await authorizeActiveAdmin(request, adminClient);
   if (!authorization.authorized) return authorization.response;
 
   const id = request.nextUrl.searchParams.get("id");

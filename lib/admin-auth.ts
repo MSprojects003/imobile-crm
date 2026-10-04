@@ -134,5 +134,5 @@ export async function authorizeActiveAdmin(request: NextRequest, adminClient: Su
       response: NextResponse.json({ error: ADMIN_ONLY_ACTION_MESSAGE }, { status: 403 }),
     }
   }
-  return authorization
+  return { authorized: true as const, adminClient, role: authorization.role }
 }
