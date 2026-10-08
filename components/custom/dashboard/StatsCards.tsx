@@ -12,6 +12,8 @@ import {
 } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { fetchDashboardStats } from "@/lib/stat-card-client"
 import type { StatKey } from "@/lib/api/stat.card"
 
@@ -19,6 +21,7 @@ const numberFormatter = new Intl.NumberFormat("en-LK")
 const currencyFormatter = new Intl.NumberFormat("en-LK", {
 	style: "currency",
 	currency: "LKR",
+	minimumFractionDigits: 2,
 	maximumFractionDigits: 2,
 })
 
@@ -30,7 +33,7 @@ const statsCards = [
 		color: "bg-rose-50 text-rose-700",
 	},
 	{
-		label: "Total Sales",
+		label: "Total Orders",
 		key: "sales",
 		icon: ShoppingBag,
 		color: "bg-sky-50 text-sky-700",
@@ -42,7 +45,7 @@ const statsCards = [
 		color: "bg-emerald-50 text-emerald-700",
 	},
 	{
-		label: "Sales Amount",
+		label: "Full Order Amount",
 		key: "salesAmount",
 		icon: CircleDollarSign,
 		color: "bg-amber-50 text-amber-700",
@@ -81,6 +84,13 @@ export function StatsCards() {
 							: stat.key === "salesAmount"
 								? currencyFormatter.format(value)
 								: numberFormatter.format(value)
+					const isCompactAmount =
+						stat.key === "salesAmount" &&
+						typeof value === "number" &&
+						value >= 200_000
+					const compactAmount = isCompactAmount && typeof value === "number"
+						? `LKR ${(value / 100_000).toFixed(1).replace(/\.0$/, "")}L`
+						: formattedValue
 
 					return (
 						<article
@@ -97,6 +107,42 @@ export function StatsCards() {
 													<Skeleton className="h-6 w-20 rounded-sm sm:h-7" />
 										) : isError ? (
 											"Unavailable"
+										) : isCompactAmount ? (
+											<>
+												<div className="hidden md:block">
+													<Tooltip>
+														<TooltipTrigger
+															render={
+																<span
+																	tabIndex={0}
+																	className="cursor-help underline decoration-dotted underline-offset-4"
+																/>
+															}
+														>
+															{compactAmount}
+														</TooltipTrigger>
+														<TooltipContent>{formattedValue}</TooltipContent>
+													</Tooltip>
+												</div>
+												<div className="md:hidden">
+													<Popover>
+														<PopoverTrigger
+															render={
+																<button
+																	type="button"
+																	aria-label={`Show full order amount: ${formattedValue}`}
+																	className="cursor-pointer underline decoration-dotted underline-offset-4"
+																/>
+															}
+														>
+															{compactAmount}
+														</PopoverTrigger>
+														<PopoverContent side="top" className="w-auto">
+															{formattedValue}
+														</PopoverContent>
+													</Popover>
+												</div>
+											</>
 										) : (
 											formattedValue
 										)}
@@ -108,7 +154,13 @@ export function StatsCards() {
 							</div>
 							<div className={`mt-2 flex min-h-6 items-center gap-1 border-t border-slate-100 pt-1.5 text-[10px] leading-4 sm:mt-3 sm:min-h-7 sm:gap-1.5 sm:pt-2 sm:text-xs ${trend ? trendColor : "text-slate-500"}`}>
 								{trend && <TrendIcon className="size-3.5 shrink-0" aria-hidden="true" />}
-								<span>{isError ? "Check your database access" : trend?.label ?? "—"}</span>
+								<span>
+									{isError
+										? "Check your database access"
+										: stat.key === "sales" || stat.key === "salesAmount"
+											? "All orders"
+											: trend?.label ?? "—"}
+								</span>
 							</div>
 						</article>
 					)

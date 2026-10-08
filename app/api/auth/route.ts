@@ -13,6 +13,7 @@ type LoginChallenge = {
   purpose: "login" | "password-reset"
   accessToken?: string
   refreshToken?: string
+  userId: string
   phone: string
   otpHash: string
   expiresAt: number
@@ -117,6 +118,34 @@ async function sendOtp(phone: string, code: string) {
 
   if (!response.ok || (result?.status && result.status.toLowerCase() !== "success")) {
     throw new Error("Notify.lk could not send the verification code")
+  }
+}
+
+async function logOtpSms(userId: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const secretKey = process.env.SUPABASE_SECRET_KEY
+  if (!supabaseUrl || !secretKey) {
+    console.error("OTP SMS log insert failed", { error: "Supabase is not configured" })
+    return
+  }
+
+  try {
+    const adminClient = createClient(supabaseUrl, secretKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { error } = await adminClient.from("sms").insert({
+      body: "OTP*** sent",
+      user_id: userId,
+      shop_id: null,
+      type: "otp_sent",
+    })
+    if (error) {
+      console.error("OTP SMS log insert failed", { code: error.code })
+    }
+  } catch (error) {
+    console.error("OTP SMS log insert failed", {
+      detail: error instanceof Error ? error.message : "Unexpected database error",
+    })
   }
 }
 
@@ -265,7 +294,7 @@ async function startLogin(body: Record<string, unknown>) {
   })
   const { data: profile, error: profileError } = await adminClient
     .from("users")
-    .select("full_name, username, phone, is_admin, is_sub_admin")
+    .select("id, full_name, username, phone, is_admin, is_sub_admin")
     .eq("username", username)
     .eq("status", true)
     .maybeSingle()
@@ -309,11 +338,13 @@ async function startLogin(body: Record<string, unknown>) {
   } catch {
     return NextResponse.json({ error: "Could not send the verification code. Please try again." }, { status: 502 })
   }
+  await logOtpSms(profile.id)
 
   const challenge: LoginChallenge = {
     purpose: "login",
     accessToken: data.session.access_token,
     refreshToken: data.session.refresh_token,
+    userId: profile.id,
     phone,
     otpHash: hashOtp(code),
     expiresAt: Date.now() + challengeLifetimeMs,
@@ -344,7 +375,7 @@ async function startPasswordReset(body: Record<string, unknown>) {
   })
   const { data: profile, error } = await adminClient
     .from("users")
-    .select("full_name, phone")
+    .select("id, full_name, phone")
     .eq("phone", phone)
     .eq("status", true)
     .maybeSingle()
@@ -360,9 +391,11 @@ async function startPasswordReset(body: Record<string, unknown>) {
   } catch {
     return NextResponse.json({ error: "Could not send the verification code. Please try again." }, { status: 502 })
   }
+  await logOtpSms(profile.id)
 
   const challenge: LoginChallenge = {
     purpose: "password-reset",
+    userId: profile.id,
     phone: normalizedPhone,
     otpHash: hashOtp(code),
     expiresAt: Date.now() + challengeLifetimeMs,
@@ -391,6 +424,7 @@ async function resendOtp(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Could not send the verification code. Please try again." }, { status: 502 })
   }
+  await logOtpSms(challenge.userId)
 
   challenge.otpHash = hashOtp(code)
   challenge.expiresAt = Date.now() + challengeLifetimeMs

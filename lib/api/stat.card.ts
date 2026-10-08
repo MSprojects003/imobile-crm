@@ -50,6 +50,36 @@ async function fetchPeriodCount(
   return count ?? 0
 }
 
+async function fetchOrderSummary(adminClient: SupabaseClient) {
+  const { count, error: countError } = await adminClient
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+
+  if (countError) throw countError
+
+  let totalCents = 0
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await adminClient
+      .from("orders")
+      .select("full_total")
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1)
+
+    if (error) throw error
+    for (const order of data ?? []) {
+      totalCents += Math.round(Number(order.full_total) * 100)
+    }
+    if (!data || data.length < pageSize) break
+  }
+
+  return {
+    count: count ?? 0,
+    fullTotal: totalCents / 100,
+  }
+}
+
 export async function fetchDashboardStats(
   adminClient: SupabaseClient,
 ): Promise<DashboardStats> {
@@ -60,18 +90,19 @@ export async function fetchDashboardStats(
   const previousFrom = previousStart.toISOString()
   const currentTo = now.toISOString()
 
-  const [shopsCurrent, shopsPrevious, productsCurrent, productsPrevious] = await Promise.all([
+  const [shopsCurrent, shopsPrevious, productsCurrent, productsPrevious, orderSummary] = await Promise.all([
     fetchPeriodCount(adminClient, "shops", currentFrom, currentTo),
     fetchPeriodCount(adminClient, "shops", previousFrom, currentFrom),
     fetchPeriodCount(adminClient, "products", currentFrom, currentTo),
     fetchPeriodCount(adminClient, "products", previousFrom, currentFrom),
+    fetchOrderSummary(adminClient),
   ])
 
   return {
     shops: shopsCurrent,
-    sales: 0,
+    sales: orderSummary.count,
     products: productsCurrent,
-    salesAmount: 0,
+    salesAmount: orderSummary.fullTotal,
     trends: {
       shops: makeTrend(shopsCurrent, shopsPrevious),
       sales: null,

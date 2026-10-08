@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Bell, Check, LoaderCircle } from "lucide-react"
+import { Bell, Check, LoaderCircle, MessageSquareText } from "lucide-react"
 import { Menu } from "@base-ui/react/menu"
 
 import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -29,6 +30,7 @@ import {
   type AdminNotification,
 } from "@/lib/notifications"
 import { supabase } from "@/lib/supabase"
+import { fetchSmsMonthlySummary } from "@/lib/sms-summary-client"
 import {
   NotificationCard,
   type NotificationCategory,
@@ -49,6 +51,7 @@ type NotificationItem = {
 }
 
 const notificationQueryKey = ["admin-notifications"]
+const smsSummaryQueryKey = ["sms-monthly-summary"]
 const activityFilters: { value: ActivityFilter; label: string }[] = [
   { value: "all", label: "All activity" },
   { value: "order", label: "Orders" },
@@ -176,6 +179,109 @@ export function NotificationsBellButton() {
         </span>
       )}
     </Button>
+  )
+}
+
+export function SmsMonthlySummaryButton() {
+  const summaryQuery = useQuery({
+    queryKey: smsSummaryQueryKey,
+    queryFn: fetchSmsMonthlySummary,
+    refetchInterval: 60_000,
+  })
+  const summary = summaryQuery.data
+  const currentMonthCount = summary?.currentCount
+  const months = summary?.months ?? []
+  const errorMessage = summaryQuery.error instanceof Error
+    ? summaryQuery.error.message
+    : "Could not load SMS counts."
+
+  return (
+    <div>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              aria-label={summaryQuery.isError
+                ? "SMS counts unavailable"
+                : `SMS sent this month: ${currentMonthCount ?? "loading"}`}
+              title={summaryQuery.isError ? errorMessage : undefined}
+              className="relative h-9 min-w-9 gap-2 border-slate-200 px-2 text-slate-600 md:px-3"
+            />
+          }
+        >
+          <MessageSquareText className="size-4 text-slate-500" aria-hidden="true" />
+          <span className="hidden text-xs font-medium md:inline">SMS</span>
+          <span className="hidden min-w-5 rounded-full bg-slate-100 px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-slate-700 md:inline-block">
+            {currentMonthCount ?? (summaryQuery.isPending ? "…" : "—")}
+          </span>
+          <span className="absolute -top-1 -right-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#ed1c2e] px-1 text-[9px] font-semibold leading-none text-white md:hidden">
+            {currentMonthCount === undefined
+              ? (summaryQuery.isPending ? "…" : "!")
+              : currentMonthCount > 99 ? "99+" : currentMonthCount}
+          </span>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80 overflow-hidden p-0">
+          <div className="border-b border-slate-100 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-900">SMS activity</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Monthly sent counts{summary ? ` · ${summary.fiscalYear}–${summary.fiscalYear + 1}` : ""}
+            </p>
+          </div>
+          {summaryQuery.isPending ? (
+            <div role="status" className="flex items-center justify-center gap-2 px-4 py-8 text-xs text-slate-500">
+              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              Loading SMS counts...
+            </div>
+          ) : summaryQuery.isError ? (
+            <p role="alert" className="px-4 py-5 text-xs text-rose-700">{errorMessage}</p>
+          ) : summary ? (
+            <>
+              <div className="max-h-72 overflow-y-auto px-2 py-1.5">
+                {months.map(({ year, month, count }) => {
+                  const monthName = new Intl.DateTimeFormat("en", {
+                    month: "long",
+                    timeZone: "UTC",
+                  }).format(new Date(Date.UTC(year, month - 1, 1)))
+                  const isCurrentMonth = year === summary.currentYear && month === summary.currentMonth
+
+                  return (
+                    <div
+                      key={`${year}-${month}`}
+                      className={isCurrentMonth
+                        ? "flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-2"
+                        : "flex items-center justify-between rounded-md px-2.5 py-2"}
+                    >
+                      <span className="text-sm text-slate-700">{monthName} {year}</span>
+                      <span className="flex items-center gap-2">
+                        {isCurrentMonth && (
+                          <span className="text-[10px] font-medium text-slate-500">This month</span>
+                        )}
+                        <span className="min-w-7 text-right text-sm font-semibold tabular-nums text-slate-900">
+                          {count.toLocaleString()}
+                        </span>
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+                <span className="text-xs font-medium text-slate-600">October–September total</span>
+                <span className="text-sm font-semibold tabular-nums text-slate-900">
+                  {summary.total.toLocaleString()}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div role="status" className="flex items-center justify-center gap-2 px-4 py-8 text-xs text-slate-500">
+              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+              Loading SMS counts...
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
 

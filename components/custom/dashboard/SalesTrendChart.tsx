@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import {
   CartesianGrid,
   Line,
@@ -15,62 +16,19 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
+import { fetchSalesTrend } from "@/lib/sales-trend-client"
+import type { SalesTrendPeriod } from "@/lib/api/sales-trend"
 
-type ChartPeriod = "today" | "month" | "quarter" | "year"
+const currencyFormatter = new Intl.NumberFormat("en-LK", {
+  style: "currency",
+  currency: "LKR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
 
-const sampleData: Record<ChartPeriod, { label: string; sales: number }[]> = {
-  today: [
-    { label: "8 AM", sales: 12 },
-    { label: "10 AM", sales: 19 },
-    { label: "12 PM", sales: 15 },
-    { label: "2 PM", sales: 27 },
-    { label: "4 PM", sales: 22 },
-    { label: "6 PM", sales: 34 },
-    { label: "8 PM", sales: 29 },
-  ],
-  month: Array.from({ length: 30 }, (_, index) => ({
-    label: String(index + 1),
-    sales: 38 + ((index * 17 + 11) % 42),
-  })),
-  quarter: [
-    { label: "Wk 1", sales: 118 },
-    { label: "Wk 2", sales: 132 },
-    { label: "Wk 3", sales: 124 },
-    { label: "Wk 4", sales: 151 },
-    { label: "Wk 5", sales: 139 },
-    { label: "Wk 6", sales: 167 },
-    { label: "Wk 7", sales: 158 },
-    { label: "Wk 8", sales: 181 },
-    { label: "Wk 9", sales: 173 },
-    { label: "Wk 10", sales: 202 },
-    { label: "Wk 11", sales: 194 },
-    { label: "Wk 12", sales: 221 },
-    { label: "Wk 13", sales: 236 },
-  ],
-  year: [
-  { month: "Jan", sales: 128 },
-  { month: "Feb", sales: 156 },
-  { month: "Mar", sales: 143 },
-  { month: "Apr", sales: 189 },
-  { month: "May", sales: 172 },
-  { month: "Jun", sales: 218 },
-  { month: "Jul", sales: 204 },
-  { month: "Aug", sales: 246 },
-  { month: "Sep", sales: 231 },
-  { month: "Oct", sales: 278 },
-  { month: "Nov", sales: 264 },
-  { month: "Dec", sales: 312 },
-  ].map(({ month, sales }) => ({ label: month, sales })),
-}
-
-const periodOptions: { value: ChartPeriod; label: string }[] = [
+const periodOptions: { value: SalesTrendPeriod; label: string }[] = [
   { value: "today", label: "Today" },
   { value: "month", label: "This month" },
   { value: "quarter", label: "Last 3 months" },
@@ -79,13 +37,30 @@ const periodOptions: { value: ChartPeriod; label: string }[] = [
 
 const chartConfig = {
   sales: {
-    label: "Sales",
+    label: "Order amount",
     color: "#ed1c2e",
   },
 } satisfies ChartConfig
 
+function formatCompactAmount(value: number) {
+  if (value >= 100_000) {
+    return `${(value / 100_000).toFixed(1).replace(/\.0$/, "")}L`
+  }
+  return new Intl.NumberFormat("en-LK", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
 export function SalesTrendChart() {
-  const [period, setPeriod] = useState<ChartPeriod>("year")
+  const [period, setPeriod] = useState<SalesTrendPeriod>("year")
+  const trendQuery = useQuery({
+    queryKey: ["dashboard", "sales-trend", period],
+    queryFn: () => fetchSalesTrend(period),
+    staleTime: 60_000,
+  })
+  const data = trendQuery.data ?? []
+  const periodLabel = periodOptions.find((option) => option.value === period)?.label.toLowerCase()
 
   return (
     <section className="w-full min-w-0" aria-labelledby="sales-trend-title">
@@ -96,13 +71,13 @@ export function SalesTrendChart() {
               Sales overview
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Monthly sales activity · Sample data
+              Order full totals · {periodLabel}
             </p>
           </div>
           <Select
             value={period}
-            onValueChange={(value: ChartPeriod | null) => {
-              if (value) setPeriod(value as ChartPeriod)
+            onValueChange={(value: SalesTrendPeriod | null) => {
+              if (value) setPeriod(value)
             }}
           >
             <SelectTrigger aria-label="Select sales chart period" className="h-8 min-w-0 px-2 text-xs">
@@ -119,45 +94,59 @@ export function SalesTrendChart() {
             </SelectContent>
           </Select>
         </div>
-        <ChartContainer
-          config={chartConfig}
-          className="h-[240px] w-full aspect-auto sm:h-[300px]"
-        >
-          <LineChart
-            accessibilityLayer
-            data={sampleData[period]}
-            margin={{ top: 10, right: 12, left: 0, bottom: 0 }}
+        {trendQuery.isPending ? (
+          <Skeleton className="h-[240px] w-full rounded-md sm:h-[300px]" />
+        ) : trendQuery.isError ? (
+          <div role="alert" className="flex h-[240px] items-center justify-center text-sm text-rose-700 sm:h-[300px]">
+            {trendQuery.error instanceof Error ? trendQuery.error.message : "Could not load order totals."}
+          </div>
+        ) : (
+          <ChartContainer
+            config={chartConfig}
+            className="h-[240px] w-full aspect-auto sm:h-[300px]"
           >
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="label"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={10}
-              minTickGap={20}
-              tick={{ fontSize: 10 }}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              width={36}
-              tick={{ fontSize: 10 }}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <Line
-              dataKey="sales"
-              type="monotone"
-              stroke="var(--color-sales)"
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 5, fill: "var(--color-sales)" }}
-            />
-          </LineChart>
-        </ChartContainer>
+            <LineChart
+              accessibilityLayer
+              data={data}
+              margin={{ top: 10, right: 12, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis
+                dataKey="label"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={10}
+                minTickGap={20}
+                tick={{ fontSize: 10 }}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={56}
+                tick={{ fontSize: 10 }}
+                tickFormatter={(value: number) => formatCompactAmount(value)}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    indicator="line"
+                    formatter={(value) => currencyFormatter.format(Number(value ?? 0))}
+                  />
+                }
+              />
+              <Line
+                dataKey="sales"
+                type="monotone"
+                stroke="var(--color-sales)"
+                strokeWidth={2.5}
+                dot={false}
+                activeDot={{ r: 5, fill: "var(--color-sales)" }}
+              />
+            </LineChart>
+          </ChartContainer>
+        )}
       </div>
     </section>
   )

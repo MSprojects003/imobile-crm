@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Menu } from "@base-ui/react/menu"
-import { Ellipsis, Eye, Phone, Search } from "lucide-react"
+import { Ellipsis, Eye, Phone, Search, Store } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -77,6 +77,71 @@ function getDialablePhone(phone: string | null) {
   if (!phone) return null
   const dialable = phone.replace(/[^\d+]/g, "")
   return /^\+[1-9]\d{7,14}$/.test(dialable) ? dialable : null
+}
+
+function ShopStatusSelect({
+  shop,
+  disabled,
+  onChange,
+}: {
+  shop: ShopRecord
+  disabled: boolean
+  onChange: (id: string, isActive: boolean) => void
+}) {
+  return (
+    <Select
+      value={shop.isActive ? "true" : "false"}
+      onValueChange={(value: string | null) => {
+        if (value === "true" || value === "false") onChange(shop.id, value === "true")
+      }}
+    >
+      <SelectTrigger
+        aria-label={`${shop.name} status`}
+        disabled={disabled}
+        className={`h-8 min-w-24 px-2 text-xs ${shop.isActive
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-slate-200 bg-slate-50 text-slate-600"}`}
+      >
+        <SelectValue>{(value) => value === "true" ? "Active" : "Deactive"}</SelectValue>
+      </SelectTrigger>
+      <SelectContent className="text-xs">
+        <SelectItem value="true" className="text-xs">Active</SelectItem>
+        <SelectItem value="false" className="text-xs">Deactive</SelectItem>
+      </SelectContent>
+    </Select>
+  )
+}
+
+function ShopActionsMenu({
+  shop,
+  onView,
+}: {
+  shop: ShopRecord
+  onView: (shop: ShopRecord) => void
+}) {
+  return (
+    <Menu.Root>
+      <Menu.Trigger
+        aria-label={`Actions for ${shop.name}`}
+        className="inline-grid size-8 shrink-0 place-items-center rounded-md border border-transparent text-slate-500 outline-none hover:border-slate-200 hover:bg-white hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30"
+      >
+        <Ellipsis className="size-4" aria-hidden="true" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="end" sideOffset={4} className="z-[120]">
+          <Menu.Popup className="min-w-40 rounded-md border border-slate-200 bg-white p-1 text-slate-800 shadow-lg outline-none">
+            <Menu.Item
+              onClick={() => onView(shop)}
+              className="flex h-9 cursor-default items-center gap-2 rounded-sm px-2.5 text-xs outline-none hover:bg-slate-100 data-highlighted:bg-slate-100"
+            >
+              <Eye className="size-4 text-slate-500" aria-hidden="true" />
+              View details
+            </Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  )
 }
 
 function badgeClass(status: string) {
@@ -187,7 +252,81 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
       <section aria-label={title} className="overflow-hidden rounded-sm border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         {!isOrders && shopsQuery.isPending ? (
           <ListPageSkeleton page="shops" contentOnly />
-        ) : <Table>
+        ) : (
+          <>
+            {!isOrders && (
+              <div className="divide-y divide-slate-100 md:hidden">
+                {shopsQuery.isError ? (
+                  <p role="alert" className="px-4 py-8 text-center text-xs text-rose-700">
+                    {shopsQuery.error instanceof Error ? shopsQuery.error.message : "Could not load shops."}
+                  </p>
+                ) : (visibleRows as ShopRecord[]).map((shop) => {
+                  const dialablePhone = getDialablePhone(shop.phone)
+                  return (
+                    <article key={shop.id} className="p-4">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span
+                          aria-hidden="true"
+                          className="grid size-12 shrink-0 place-items-center rounded-xl bg-rose-50 text-[#c82432] ring-1 ring-rose-100"
+                        >
+                          <Store className="size-5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h2 className="truncate text-sm font-semibold text-slate-900">
+                                {shop.name}
+                              </h2>
+                              {shop.shopId && (
+                                <p className="mt-0.5 truncate font-mono text-[10px] text-slate-500">
+                                  {shop.shopId}
+                                </p>
+                              )}
+                            </div>
+                            <ShopActionsMenu shop={shop} onView={setSelectedShop} />
+                          </div>
+                          <dl className="mt-2 space-y-1">
+                            <div className="flex min-w-0 items-baseline gap-1.5 text-xs">
+                              <dt className="shrink-0 text-slate-500">Owner</dt>
+                              <dd className="truncate font-medium text-slate-700">{shop.owner || "—"}</dd>
+                            </div>
+                            <div className="flex min-w-0 items-baseline gap-1.5 text-xs">
+                              <dt className="shrink-0 text-slate-500">Staff</dt>
+                              <dd className="truncate font-medium text-slate-700">{shop.staffName || "—"}</dd>
+                            </div>
+                            <div className="flex min-w-0 items-baseline gap-1.5 text-xs">
+                              <dt className="shrink-0 text-slate-500">Phone</dt>
+                              <dd className="truncate tabular-nums text-slate-700">
+                                {dialablePhone ? (
+                                  <a className="hover:text-emerald-700" href={`tel:${dialablePhone}`}>
+                                    {shop.phone}
+                                  </a>
+                                ) : shop.phone || "—"}
+                              </dd>
+                            </div>
+                          </dl>
+                          <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                            <span className="text-[11px] font-medium text-slate-500">Shop status</span>
+                            <ShopStatusSelect
+                              shop={shop}
+                              disabled={shopStatusMutation.isPending && shopStatusMutation.variables?.id === shop.id}
+                              onChange={(id, isActive) => shopStatusMutation.mutate({ id, isActive })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  )
+                })}
+                {!shopsQuery.isError && visibleRows.length === 0 && (
+                  <p className="px-4 py-10 text-center text-xs text-slate-500">
+                    No shops match your search.
+                  </p>
+                )}
+              </div>
+            )}
+            <div className={isOrders ? "" : "hidden md:block"}>
+              <Table>
           {isOrders ? (
             <>
               <TableHeader className="bg-slate-50/80">
@@ -271,51 +410,14 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Select
-                        value={shop.isActive ? "true" : "false"}
-                        onValueChange={(value: string | null) => {
-                          if (value === "true" || value === "false") {
-                            shopStatusMutation.mutate({ id: shop.id, isActive: value === "true" })
-                          }
-                        }}
-                      >
-                        <SelectTrigger
-                          aria-label={`${shop.name} status`}
-                          disabled={shopStatusMutation.isPending && shopStatusMutation.variables?.id === shop.id}
-                          className={`h-8 min-w-24 px-2 text-xs ${shop.isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-slate-200 bg-slate-50 text-slate-600"}`}
-                        >
-                          <SelectValue>{(value) => value === "true" ? "Active" : "Deactive"}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent className="text-xs">
-                          <SelectItem value="true" className="text-xs">Active</SelectItem>
-                          <SelectItem value="false" className="text-xs">Deactive</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <ShopStatusSelect
+                        shop={shop}
+                        disabled={shopStatusMutation.isPending && shopStatusMutation.variables?.id === shop.id}
+                        onChange={(id, isActive) => shopStatusMutation.mutate({ id, isActive })}
+                      />
                     </TableCell>
                     <TableCell className="pr-5">
-                      <Menu.Root>
-                        <Menu.Trigger
-                          aria-label={`Actions for ${shop.name}`}
-                          className="inline-grid size-8 place-items-center rounded-md border border-transparent text-slate-500 outline-none hover:border-slate-200 hover:bg-white hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30"
-                        >
-                          <Ellipsis className="size-4" aria-hidden="true" />
-                        </Menu.Trigger>
-                        <Menu.Portal>
-                          <Menu.Positioner side="bottom" align="end" sideOffset={4} className="z-[120]">
-                            <Menu.Popup className="min-w-40 rounded-md border border-slate-200 bg-white p-1 text-slate-800 shadow-lg outline-none">
-                              <Menu.Item
-                                onClick={() => setSelectedShop(shop)}
-                                className="flex h-9 cursor-default items-center gap-2 rounded-sm px-2.5 text-xs outline-none hover:bg-slate-100 data-highlighted:bg-slate-100"
-                              >
-                                <Eye className="size-4 text-slate-500" aria-hidden="true" />
-                                View details
-                              </Menu.Item>
-                            </Menu.Popup>
-                          </Menu.Positioner>
-                        </Menu.Portal>
-                      </Menu.Root>
+                      <ShopActionsMenu shop={shop} onView={setSelectedShop} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -327,7 +429,10 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
               <TableRow><TableCell colSpan={isOrders ? 6 : 7} className="h-24 text-center text-xs text-slate-500">No {title.toLowerCase()} match your search.</TableCell></TableRow>
             </TableBody>
           )}
-        </Table>}
+              </Table>
+            </div>
+          </>
+        )}
       </section>
       {shopStatusMutation.isError && !isOrders && (
         <p role="alert" className="text-xs text-rose-700">

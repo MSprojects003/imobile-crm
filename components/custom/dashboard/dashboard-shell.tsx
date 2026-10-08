@@ -16,6 +16,7 @@ import {
 import {
   NotificationsBellButton,
   NotificationsProvider,
+  SmsMonthlySummaryButton,
 } from "@/components/custom/dashboard/Notifications"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -117,52 +118,55 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <NotificationsProvider>
         <AppSidebar />
         <SidebarInset className="h-svh min-h-0 overflow-hidden">
-          <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
-            <SidebarTrigger aria-label="Toggle navigation" />
-            <div className="hidden h-5 w-px bg-border md:block" />
-            <Link
-              href="/dashboard"
-              aria-label="iMobile dashboard"
-              className="absolute left-1/2 -translate-x-1/2 md:hidden"
-            >
-              <Image
-                src="/imobile.webp"
-                alt="iMobile Supreme"
-                width={130}
-                height={42}
-                priority
-                className="h-auto w-[110px] object-contain"
-              />
-            </Link>
-            <Breadcrumb className="hidden md:block">
-              <BreadcrumbList>
-                {currentPage === "Dashboard" ? (
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                  </BreadcrumbItem>
-                ) : (
-                  <>
+          <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
+            <div className="flex min-w-0 items-center gap-2 md:gap-3">
+              <SidebarTrigger aria-label="Toggle navigation" />
+              <Link
+                href="/dashboard"
+                aria-label="iMobile dashboard"
+                className="shrink-0"
+              >
+                <Image
+                  src="/imobile.webp"
+                  alt="iMobile Supreme"
+                  width={130}
+                  height={42}
+                  priority
+                  className="h-auto w-[96px] object-contain sm:w-[110px]"
+                />
+              </Link>
+              <div className="hidden h-5 w-px bg-border md:block" />
+              <Breadcrumb className="hidden md:block">
+                <BreadcrumbList>
+                  {currentPage === "Dashboard" ? (
                     <BreadcrumbItem>
-                      <BreadcrumbLink render={<Link href="/dashboard" />}>Dashboard</BreadcrumbLink>
+                      <BreadcrumbPage>Dashboard</BreadcrumbPage>
                     </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    {isAssetPage && (
-                      <>
-                        <BreadcrumbItem>
-                          <BreadcrumbLink render={<Link href="/dashboard/products" />}>Asset</BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                      </>
-                    )}
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>{currentPage}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </>
-                )}
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="ml-auto flex items-center gap-1">
+                  ) : (
+                    <>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink render={<Link href="/dashboard" />}>Dashboard</BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator />
+                      {isAssetPage && (
+                        <>
+                          <BreadcrumbItem>
+                            <BreadcrumbLink render={<Link href="/dashboard/products" />}>Asset</BreadcrumbLink>
+                          </BreadcrumbItem>
+                          <BreadcrumbSeparator />
+                        </>
+                      )}
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>{currentPage}</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </>
+                  )}
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
               <NotificationsBellButton />
+              <SmsMonthlySummaryButton />
               <AssignWorkSheet />
             </div>
           </header>
