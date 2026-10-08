@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
-import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton"
+import { ListPageSkeleton } from "@/components/custom/dashboard/list-page-skeleton"
 import { PageHeading } from "@/components/custom/dashboard/page-heading"
 import { fetchShops, updateShopStatus, type ShopRecord } from "@/lib/shops"
 
@@ -89,6 +89,7 @@ function badgeClass(status: string) {
 export function OperationsWorkspace({ page }: { page: OrdersPage }) {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [selectedStaff, setSelectedStaff] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedShop, setSelectedShop] = useState<ShopRecord | null>(null)
   const isOrders = page === "orders"
@@ -107,14 +108,24 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
       await queryClient.invalidateQueries({ queryKey: ["shops"] })
     },
   })
+  const staffOptions = useMemo(
+    () => Array.from(new Set((shopsQuery.data ?? [])
+      .map((shop) => shop.staffName.trim())
+      .filter(Boolean)))
+      .sort((first, second) => first.localeCompare(second)),
+    [shopsQuery.data],
+  )
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase()
     const shops = shopsQuery.data ?? []
-    if (!query) return isOrders ? sampleOrders : shops
+    if (isOrders) {
+      if (!query) return sampleOrders
+      return sampleOrders.filter((order) => [order.id, order.customer, order.shop, order.status].some((value) => value.toLowerCase().includes(query)))
+    }
 
-    return isOrders
-      ? sampleOrders.filter((order) => [order.id, order.customer, order.shop, order.status].some((value) => value.toLowerCase().includes(query)))
-      : shops.filter((shop) => [
+    return shops.filter((shop) =>
+      (selectedStaff === null || shop.staffName === selectedStaff) &&
+      (!query || [
         shop.shopId ?? "",
         shop.name,
         shop.owner,
@@ -122,7 +133,8 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
         shop.staffPhone ?? "",
         shop.isActive ? "active" : "deactive",
       ].some((value) => value.toLowerCase().includes(query)))
-  }, [isOrders, search, shopsQuery.data])
+    )
+  }, [isOrders, search, selectedStaff, shopsQuery.data])
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize))
   const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const title = isOrders ? "Orders" : "Shops"
@@ -137,23 +149,44 @@ export function OperationsWorkspace({ page }: { page: OrdersPage }) {
             : "View shop owners, assigned staff, and current status."
         }
       />
-      <label className="relative block w-full sm:max-w-sm">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-        <Input
-          aria-label={`Search ${title.toLowerCase()}`}
-          className="h-9 rounded-sm border-slate-200 bg-white pl-9 text-xs"
-          onChange={(event) => {
-            setSearch(event.target.value)
-            setCurrentPage(1)
-          }}
-          placeholder={isOrders ? "Search order, customer, or shop" : "Search shop, manager, or location"}
-          value={search}
-        />
-      </label>
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+        {!isOrders && (
+          <Select
+            value={selectedStaff ?? "All staff"}
+            onValueChange={(value) => {
+              setSelectedStaff(value === "All staff" ? null : value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger aria-label="Filter shops by staff" className="h-9 w-full rounded-sm border-slate-200 bg-white text-xs sm:w-52">
+              <SelectValue placeholder="Filter by staff" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All staff" className="text-xs">All staff</SelectItem>
+              {staffOptions.map((staffName) => (
+                <SelectItem key={staffName} value={staffName} className="text-xs">{staffName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <label className="relative block w-full sm:max-w-sm">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <Input
+            aria-label={`Search ${title.toLowerCase()}`}
+            className="h-9 rounded-sm border-slate-200 bg-white pl-9 text-xs"
+            onChange={(event) => {
+              setSearch(event.target.value)
+              setCurrentPage(1)
+            }}
+            placeholder={isOrders ? "Search order, customer, or shop" : "Search shop, manager, or location"}
+            value={search}
+          />
+        </label>
+      </div>
 
       <section aria-label={title} className="overflow-hidden rounded-sm border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         {!isOrders && shopsQuery.isPending ? (
-          <TableSkeleton label="shops" columns={7} rows={5} />
+          <ListPageSkeleton page="shops" contentOnly />
         ) : <Table>
           {isOrders ? (
             <>

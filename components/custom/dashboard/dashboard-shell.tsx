@@ -7,10 +7,17 @@ import { usePathname, useRouter } from "next/navigation"
 import { AssignWorkSheet } from "@/components/custom/dashboard/assign-work-sheet"
 import { AppSidebar } from "@/components/custom/dashboard/app-sidebar"
 import {
+  ListPageSkeleton,
+  type ListPageKind,
+} from "@/components/custom/dashboard/list-page-skeleton"
+import {
+  DashboardPageSkeleton,
+} from "@/components/custom/dashboard/dashboard-skeleton"
+import {
   NotificationsBellButton,
   NotificationsProvider,
 } from "@/components/custom/dashboard/Notifications"
-import { DashboardSessionSkeleton } from "@/components/custom/dashboard/dashboard-skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -32,11 +39,36 @@ const pageTitles: Record<string, string> = {
   brands: "Brands",
   products: "Products",
   reps: "Reps (Staffs)",
+  "assigned-work": "Assigned - Work",
   orders: "Orders",
   users: "Users",
   shops: "Shops",
   account: "Account",
   notifications: "Notifications",
+}
+
+const listPageKinds: Record<string, ListPageKind> = {
+  products: "products",
+  reps: "staff",
+  brands: "catalog",
+  categories: "catalog",
+  orders: "orders",
+  shops: "shops",
+  "assigned-work": "assigned-work",
+  users: "users",
+}
+
+function SessionPageSkeleton({ pathname }: { pathname: string }) {
+  const page = pathname.split("/").filter(Boolean).at(-1) ?? "dashboard"
+  if (page === "dashboard") return <DashboardPageSkeleton />
+  const pageKind = listPageKinds[page]
+  if (pageKind) return <ListPageSkeleton page={pageKind} />
+  return (
+    <div aria-label={`Loading ${page} page`} aria-busy="true" role="status" className="space-y-4">
+      <Skeleton className="h-6 w-40" />
+      <Skeleton className="h-32 w-full rounded-md" />
+    </div>
+  )
 }
 
 export function DashboardShell({ children }: { children: ReactNode }) {
@@ -54,6 +86,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     "/dashboard/categories",
     "/dashboard/brands",
     "/dashboard/reps",
+    "/dashboard/assigned-work",
     "/dashboard/orders",
     "/dashboard/shops",
   ].includes(pathname)
@@ -78,10 +111,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       authListener.subscription.unsubscribe()
     }
   }, [router])
-
-  if (isLoading) {
-    return <DashboardSessionSkeleton />
-  }
 
   return (
     <SidebarProvider>
@@ -141,7 +170,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             className="min-h-0 flex-1 overflow-y-auto bg-background p-5 sm:p-8"
             style={{ paddingBottom: hasStickyTableFooter ? 0 : undefined }}
           >
-            {children}
+            {isLoading ? <SessionPageSkeleton pathname={pathname} /> : children}
           </div>
         </SidebarInset>
       </NotificationsProvider>

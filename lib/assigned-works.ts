@@ -18,6 +18,18 @@ export type AssignmentOptions = {
   shops: AssignmentShopOption[]
 }
 
+export type AssignedWorkRecord = {
+  id: string
+  staffId: string
+  staffCode: string
+  staffName: string
+  shopName: string
+  shopArea: string
+  message: string | null
+  progress: string
+  createdAt: string
+}
+
 export type CreateAssignedWorkInput = {
   staffId: string
   shopId: string
@@ -53,6 +65,16 @@ export async function fetchAssignmentOptions(): Promise<AssignmentOptions> {
   }
 }
 
+export async function fetchAssignedWorks(): Promise<AssignedWorkRecord[]> {
+  const accessToken = await getAccessToken()
+  const response = await fetch("/api/assigned-works/list", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  })
+  const result = await parseResponse<{ works: AssignedWorkRecord[] }>(response)
+  return result.works
+}
+
 export async function createAssignedWork(input: CreateAssignedWorkInput) {
   const accessToken = await getAccessToken()
   const response = await fetch("/api/assigned-works", {
@@ -63,5 +85,8 @@ export async function createAssignedWork(input: CreateAssignedWorkInput) {
     },
     body: JSON.stringify(input),
   })
-  return parseResponse<{ assignedWork: { id: string } }>(response)
+  return parseResponse<{
+    assignedWork: { id: string }
+    smsDelivery: { sent: boolean; logged: boolean; error?: string }
+  }>(response)
 }

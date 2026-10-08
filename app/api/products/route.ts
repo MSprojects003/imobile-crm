@@ -6,7 +6,7 @@ import { authorizeDashboardRequest, createAdminClient, authorizeActiveAdmin } fr
 import type { ProductPriceTier, ProductPricingType } from "@/lib/api/products";
 
 const productSelection =
-  "id, sku, name, model_number, model, category, brand, manufactured_year, description, images, specifications, pricing_type, fixed_price, price_tiers, colors, stock, created_at";
+  "id, sku, name, model_number, model, category, brand, manufactured_year, description, images, specifications, pricing_type, fixed_price, price_tiers, colors, stock, created_at, discount_percentage, discount_amount, old_price, old_price_tiers";
 const MAX_IMAGES = 8;
 const MAX_EDIT_IMAGES = 5;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -159,6 +159,7 @@ export async function PATCH(request: NextRequest) {
     "category",
     "brand",
     "price",
+    "discount",
     "pricing",
     "stock",
     "manufactured_year",
@@ -668,6 +669,61 @@ export async function PATCH(request: NextRequest) {
       );
     }
     update.stock = value;
+  } else if (field === "discount") {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 90) {
+      return NextResponse.json(
+        { error: "Discount must be between 0% and 90%." },
+        { status: 400 },
+      );
+    }
+
+    const currentDiscount = Number(current.discount_percentage ?? 0);
+    const requestedDiscount = Math.round(value * 100) / 100;
+    if (current.pricing_type === "bulk") {
+      const currentTiers = Array.isArray(current.price_tiers)
+        ? current.price_tiers as ProductPriceTier[]
+        : [];
+      const originalTiers = currentDiscount > 0 && Array.isArray(current.old_price_tiers) && current.old_price_tiers.length
+        ? current.old_price_tiers as ProductPriceTier[]
+        : currentTiers;
+
+      if (requestedDiscount === 0) {
+        update.price_tiers = originalTiers;
+        update.old_price_tiers = [];
+        update.old_price = 0;
+        update.discount_percentage = 0;
+        update.discount_amount = 0;
+      } else {
+        update.price_tiers = originalTiers.map((tier) => ({
+          ...tier,
+          price: Math.round(tier.price * (1 - requestedDiscount / 100) * 100) / 100,
+        }));
+        update.old_price_tiers = originalTiers;
+        update.old_price = 0;
+        update.discount_percentage = requestedDiscount;
+        update.discount_amount = 0;
+      }
+    } else {
+      const currentPrice = Number(current.fixed_price ?? 0);
+      const originalPrice = currentDiscount > 0 && Number(current.old_price) > 0
+        ? Number(current.old_price)
+        : currentPrice;
+
+      if (requestedDiscount === 0) {
+        update.fixed_price = originalPrice;
+        update.old_price = 0;
+        update.old_price_tiers = [];
+        update.discount_percentage = 0;
+        update.discount_amount = 0;
+      } else {
+        const discountedPrice = Math.round(originalPrice * (1 - requestedDiscount / 100) * 100) / 100;
+        update.fixed_price = discountedPrice;
+        update.old_price = originalPrice;
+        update.old_price_tiers = [];
+        update.discount_percentage = requestedDiscount;
+        update.discount_amount = Math.round((originalPrice - discountedPrice) * 100) / 100;
+      }
+    }
   } else if (field === "manufactured_year") {
     if (
       value !== null &&
@@ -704,6 +760,10 @@ export async function PATCH(request: NextRequest) {
     } else {
       update.fixed_price = value;
     }
+    update.old_price = 0;
+    update.old_price_tiers = [];
+    update.discount_percentage = 0;
+    update.discount_amount = 0;
   } else if (field === "pricing") {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return NextResponse.json(
@@ -730,6 +790,10 @@ export async function PATCH(request: NextRequest) {
       update.pricing_type = "fixed";
       update.fixed_price = pricing.fixedPrice;
       update.price_tiers = [];
+      update.old_price = 0;
+      update.old_price_tiers = [];
+      update.discount_percentage = 0;
+      update.discount_amount = 0;
     } else if (
       pricing.pricingType === "bulk" &&
       Array.isArray(pricing.priceTiers) &&
@@ -781,6 +845,10 @@ export async function PATCH(request: NextRequest) {
       update.pricing_type = "bulk";
       update.fixed_price = null;
       update.price_tiers = tiers;
+      update.old_price = 0;
+      update.old_price_tiers = [];
+      update.discount_percentage = 0;
+      update.discount_amount = 0;
     } else {
       return NextResponse.json(
         { error: "Enter at least one valid bulk price tier." },
@@ -1078,6 +1146,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const [
+    { data: adminProfiles, error: adminsError },
+    { data: staffProfiles, error: staffError },
+  ] = await Promise.all([
+    adminClient
+      .from("users")
+      .select("id")
+      .eq("is_admin", true)
+      .eq("status", true),
+    adminClient
+      .from("staff")
+      .select("user_id")
+      .eq("is_active", true)
+      .eq("is_deleted", false),
+  ]);
+  if (adminsError || staffError) {
+    console.error("Product notification recipient lookup failed", {
+      adminsCode: adminsError?.code,
+      staffCode: staffError?.code,
+    });
+    return NextResponse.json(
+      { error: "Could not load product notification recipients." },
+      { status: 500 },
+    );
+  }
+  const notificationRecipients = [...new Set([
+    authorization.notificationUserId,
+    ...(adminProfiles ?? []).map((profile) => profile.id),
+    ...(staffProfiles ?? []).flatMap((profile) =>
+      typeof profile.user_id === "string" ? [profile.user_id] : []
+    ),
+  ])];
+
   const storage = adminClient.storage.from("products");
   const uploadedPaths: string[] = [];
   const imageUrls: string[] = [];
@@ -1143,6 +1244,50 @@ export async function POST(request: NextRequest) {
     console.error("Product insert failed", { code: insertError.code });
     return NextResponse.json(
       { error: "Could not save the product." },
+      { status: 500 },
+    );
+  }
+
+  const notificationMessage =
+    `A new product has been added successfully: ${product.name} ` +
+    `(Product ID: ${product.sku}). It uses ${pricingType === "bulk" ? "bulk pricing" : "fixed pricing"}.`;
+  const { error: notificationError } = await adminClient
+    .from("notifications")
+    .insert(notificationRecipients.map((recipientId) => ({
+      title: "New product added",
+      message: notificationMessage,
+      type: "product_added",
+      from_user_id: authorization.notificationUserId,
+      to_user_id: recipientId,
+      is_to_all: false,
+      is_read: false,
+      content_id: product.id,
+      link: "/dashboard/products",
+    })));
+
+  if (notificationError) {
+    console.error("Product notification insert failed", {
+      code: notificationError.code,
+      productId: product.id,
+    });
+    const { error: productRollbackError } = await adminClient
+      .from("products")
+      .delete()
+      .eq("id", product.id);
+    const { error: imageCleanupError } = await storage.remove(uploadedPaths);
+    if (productRollbackError || imageCleanupError) {
+      console.error("Product rollback failed after notification error", {
+        productId: product.id,
+        productCode: productRollbackError?.code,
+        imageMessage: imageCleanupError?.message,
+      });
+    }
+    return NextResponse.json(
+      {
+        error: productRollbackError || imageCleanupError
+          ? "Product notification failed, and product creation could not be fully rolled back."
+          : "Could not notify staff and admins; the product was not saved.",
+      },
       { status: 500 },
     );
   }

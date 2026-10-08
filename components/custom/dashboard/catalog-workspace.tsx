@@ -6,6 +6,7 @@ import { ImagePlus, Plus, Search, Shapes, Tags, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -24,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
-import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton"
+import { ListPageSkeleton } from "@/components/custom/dashboard/list-page-skeleton"
 import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
 import { supabase } from "@/lib/supabase"
 
@@ -484,11 +485,12 @@ function CatalogList({
   const { title, singular, icon: Icon } = tabDetails[tab]
 
   if (isLoading) {
-    return <TableSkeleton label={title.toLowerCase()} columns={5} rows={pageSize} />
+    return <ListPageSkeleton page="catalog" contentOnly />
   }
 
   return (
     <section aria-label={title} className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03]">
+      <div className="hidden md:block">
       <Table className="text-xs">
         <TableHeader className="bg-slate-50">
           <TableRow className="hover:bg-transparent">
@@ -523,6 +525,49 @@ function CatalogList({
           )}
         </TableBody>
       </Table>
+      </div>
+      <div className="space-y-2 p-2 md:hidden">
+        {error ? (
+          <p role="alert" className="px-3 py-8 text-center text-xs text-rose-700">
+            Could not load {title.toLowerCase()}: {error}
+          </p>
+        ) : entries.length === 0 ? (
+          <div className="px-3 py-8 text-center">
+            <p className="text-xs font-medium text-slate-700">
+              {searchTerm.trim() ? `No ${title.toLowerCase()} match “${searchTerm.trim()}”` : `No ${singular}s found`}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {searchTerm.trim() ? "Try a different search." : `Add your first ${singular} to get started.`}
+            </p>
+          </div>
+        ) : entries.map((entry) => (
+          <article key={entry.id} className="flex min-w-0 items-start gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            {entry.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={entry.imageUrl}
+                alt={`${entry.name} ${singular}`}
+                loading="lazy"
+                className="size-14 shrink-0 rounded-md border border-slate-200 bg-slate-50 object-cover"
+              />
+            ) : (
+              <span className="grid size-14 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+                <Icon className="size-5" aria-hidden="true" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-start justify-between gap-2">
+                <h2 className="min-w-0 truncate text-xs font-semibold text-slate-900">{entry.name}</h2>
+                <CatalogMobileStatus entry={entry} onUpdateCategory={onUpdateEntry} />
+              </div>
+              <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-[11px] leading-4 text-slate-600">
+                {entry.description || "No description provided."}
+              </p>
+              <p className="mt-2 text-[10px] text-slate-400">Created {entry.createdAt}</p>
+            </div>
+          </article>
+        ))}
+      </div>
     </section>
   )
 }
@@ -725,5 +770,69 @@ function CatalogStatusCell({
       )}
       {error && <p className="mt-1 max-w-40 text-xs text-rose-700" role="alert">{error}</p>}
     </TableCell>
+  )
+}
+
+function CatalogMobileStatus({
+  entry,
+  onUpdateCategory,
+}: {
+  entry: CatalogEntry
+  onUpdateCategory?: (id: CatalogEntry["id"], field: CategoryUpdateField, value: string | File) => Promise<void>
+}) {
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState("")
+  const isDeleted = Boolean(entry.isDeleted)
+
+  async function updateStatus(value: string) {
+    if (!onUpdateCategory || value === String(isDeleted)) return
+    setIsSaving(true)
+    setError("")
+    try {
+      await onUpdateCategory(entry.id, "is_deleted", value)
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Could not update status.")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (!onUpdateCategory) {
+    return (
+      <Badge
+        variant="outline"
+        className={`shrink-0 ${isDeleted
+          ? "border-slate-200 bg-slate-50 text-slate-600"
+          : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+      >
+        {isDeleted ? "Deactive" : "Active"}
+      </Badge>
+    )
+  }
+
+  return (
+    <div className="shrink-0">
+      <Select
+        value={isDeleted ? "true" : "false"}
+        onValueChange={(value) => {
+          if (value) void updateStatus(value)
+        }}
+        disabled={isSaving}
+      >
+        <SelectTrigger
+          aria-label={`${entry.name} status`}
+          className={`h-6 min-w-0 gap-1 rounded-full px-2 text-[10px] font-medium shadow-none ${isDeleted
+            ? "border-slate-200 bg-slate-50 text-slate-600"
+            : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+        >
+          <SelectValue>{(value) => value === "true" ? "Deactive" : "Active"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="false" className="text-xs">Active</SelectItem>
+          <SelectItem value="true" className="text-xs">Deactive</SelectItem>
+        </SelectContent>
+      </Select>
+      {error && <p role="alert" className="mt-1 max-w-24 text-right text-[10px] text-rose-700">{error}</p>}
+    </div>
   )
 }

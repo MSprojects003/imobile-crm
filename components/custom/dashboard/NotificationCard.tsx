@@ -3,9 +3,10 @@
 import { useState } from "react"
 import {
   AlertTriangle,
+  Bell,
+  Boxes,
   Check,
   ClipboardList,
-  Package,
   Store,
   UsersRound,
 } from "lucide-react"
@@ -17,7 +18,7 @@ export type NotificationCategory =
   | "stock"
   | "shop"
   | "staff"
-  | "catalog"
+  | "other"
 
 export type NotificationType = "info" | "success" | "warning" | "error"
 
@@ -42,7 +43,7 @@ interface NotificationCardProps {
 
 const categoryMeta: Record<
   NotificationCategory,
-  { label: string; icon: typeof Package; className: string }
+  { label: string; icon: typeof Bell; className: string }
 > = {
   order: {
     label: "Order",
@@ -69,9 +70,9 @@ const categoryMeta: Record<
     icon: UsersRound,
     className: "bg-indigo-50 text-indigo-700",
   },
-  catalog: {
-    label: "Catalog",
-    icon: Package,
+  other: {
+    label: "Other",
+    icon: Bell,
     className: "bg-slate-100 text-slate-700",
   },
 }
@@ -159,9 +160,11 @@ export function NotificationCard({
           )}
           <button
             type="button"
+            aria-expanded={expanded}
             className="text-[11px] font-medium text-[#c82432] hover:underline"
             onClick={(event) => {
               event.stopPropagation()
+              if (!expanded) onClick?.()
               setExpanded((current) => !current)
             }}
           >

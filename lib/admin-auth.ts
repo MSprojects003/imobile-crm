@@ -33,6 +33,7 @@ type AuthorizedDashboardUser = {
   authorized: true
   response: null
   role: DashboardRole
+  notificationUserId: string
 }
 
 type UnauthorizedDashboardUser = {
@@ -66,7 +67,7 @@ export async function authorizeDashboardUser(
 
   const { data: profiles, error: profileError } = await adminClient
     .from("users")
-    .select("phone, is_admin, is_sub_admin")
+    .select("id, phone, is_admin, is_sub_admin")
     .eq("status", true)
     .or("is_admin.eq.true,is_sub_admin.eq.true")
 
@@ -83,11 +84,11 @@ export async function authorizeDashboardUser(
     isSubAdmin: Boolean(profile?.is_sub_admin),
   })
 
-  if (!role) {
+  if (!profile || !role) {
     return { authorized: false, response: NextResponse.json({ error: "Admin access is required." }, { status: 403 }) }
   }
 
-  return { authorized: true, response: null, role }
+  return { authorized: true, response: null, role, notificationUserId: profile.id }
 }
 
 export async function authorizeDashboardAction(
@@ -122,7 +123,12 @@ export async function authorizeDashboardRequest(
 
   const authorization = await authorizeDashboardAction(request, adminClient, action)
   if (!authorization.authorized) return authorization
-  return { authorized: true as const, adminClient, role: authorization.role }
+  return {
+    authorized: true as const,
+    adminClient,
+    role: authorization.role,
+    notificationUserId: authorization.notificationUserId,
+  }
 }
 
 export async function authorizeActiveAdmin(request: NextRequest, adminClient: SupabaseClient) {
@@ -134,5 +140,10 @@ export async function authorizeActiveAdmin(request: NextRequest, adminClient: Su
       response: NextResponse.json({ error: ADMIN_ONLY_ACTION_MESSAGE }, { status: 403 }),
     }
   }
-  return { authorized: true as const, adminClient, role: authorization.role }
+  return {
+    authorized: true as const,
+    adminClient,
+    role: authorization.role,
+    notificationUserId: authorization.notificationUserId,
+  }
 }

@@ -41,6 +41,10 @@ export type CreatedProduct = {
   pricing_type: ProductPricingType;
   fixed_price: number | null;
   price_tiers: ProductPriceTier[];
+  discount_percentage: number | null;
+  discount_amount: number | null;
+  old_price: number | null;
+  old_price_tiers: ProductPriceTier[] | null;
   colors: string[];
   stock: number;
 };
@@ -182,6 +186,11 @@ export type ProductFieldEdit = {
   value: string | number | null;
 };
 
+export type ProductDiscountEdit = {
+  field: "discount";
+  value: number;
+};
+
 export type ProductArrayEdit = {
   field: "specifications" | "colors";
   value: string[];
@@ -207,7 +216,7 @@ export type ProductImagesEdit = {
 };
 
 export type ProductEdit =
-  ProductFieldEdit | ProductArrayEdit | ProductPricingEdit | ProductImagesEdit;
+  ProductFieldEdit | ProductDiscountEdit | ProductArrayEdit | ProductPricingEdit | ProductImagesEdit;
 
 export async function updateProduct(
   id: string,

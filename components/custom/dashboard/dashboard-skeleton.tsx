@@ -1,29 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton"
 
-export function DashboardSessionSkeleton() {
-  return (
-    <main className="flex min-h-svh bg-white">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 p-5 md:flex">
-        <Skeleton className="mb-8 h-10 w-36 rounded-sm" />
-        <Skeleton className="mb-4 h-3 w-20 rounded-sm" />
-        <div className="space-y-3">
-          {[0, 1, 2, 3, 4].map((item) => (
-            <Skeleton key={item} className="h-10 w-full rounded-sm" />
-          ))}
-        </div>
-        <Skeleton className="mt-auto h-12 w-full rounded-sm" />
-      </aside>
-      <div className="min-w-0 flex-1">
-        <div className="flex h-16 items-center gap-4 border-b border-slate-200 px-5">
-          <Skeleton className="size-8 rounded-sm" />
-          <Skeleton className="h-4 w-36 rounded-sm" />
-        </div>
-        <DashboardPageSkeleton />
-      </div>
-    </main>
-  )
-}
-
 export function DashboardPageSkeleton() {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-5 sm:p-8" aria-label="Loading dashboard">

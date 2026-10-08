@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type FormEvent } from "react"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ClipboardList, UserPlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,7 @@ import { RestrictedAction } from "@/components/custom/dashboard/restricted-actio
 const workDetails = ["Shop visit", "Product audit", "Stock check", "Order delivery", "Other"]
 
 export function AssignWorkSheet() {
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [staffId, setStaffId] = useState("")
   const [work, setWork] = useState("")
@@ -45,9 +46,17 @@ export function AssignWorkSheet() {
   })
   const createMutation = useMutation({
     mutationFn: createAssignedWork,
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["assigned-works"] })
+      await queryClient.invalidateQueries({ queryKey: ["admin-notifications"] })
       setOpen(false)
-      setToastMessage("Work assigned successfully.")
+      setToastMessage(
+        result.smsDelivery.sent
+          ? result.smsDelivery.logged
+            ? "Work assigned, staff notified, and SMS sent."
+            : "Work assigned and SMS sent, but the SMS log could not be saved."
+          : `Work assigned and staff notified, but SMS could not be sent${result.smsDelivery.error ? `: ${result.smsDelivery.error}` : ""}${result.smsDelivery.logged ? "" : " or logged"}.`
+      )
       setStaffId("")
       setWork("")
       setCustomWork("")
@@ -272,7 +281,11 @@ export function AssignWorkSheet() {
         <div
           role="status"
           aria-live="polite"
-          className="fixed right-4 bottom-4 z-[120] rounded-md border border-emerald-200 bg-white px-4 py-3 text-xs font-medium text-emerald-800 shadow-lg sm:right-8 sm:bottom-8"
+          className={`fixed right-4 bottom-4 z-[120] rounded-md border bg-white px-4 py-3 text-xs font-medium shadow-lg sm:right-8 sm:bottom-8 ${
+            toastMessage.includes("could not") || toastMessage.includes("could not be saved")
+              ? "border-amber-200 text-amber-800"
+              : "border-emerald-200 text-emerald-800"
+          }`}
         >
           {toastMessage}
         </div>

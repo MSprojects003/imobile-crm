@@ -80,6 +80,9 @@ function mapProduct(row: ProductRecord): Product {
     pricingType: row.pricing_type,
     fixedPrice: row.fixed_price,
     priceTiers: row.price_tiers,
+    discountPercent: row.discount_percentage ?? 0,
+    oldPrice: row.old_price,
+    oldPriceTiers: row.old_price_tiers ?? [],
     manufacturedYear: row.manufactured_year,
     colors: normalizeProductColors(row.colors),
     createdAt: row.created_at,
@@ -252,12 +255,16 @@ export function ProductWorkspace() {
     setEditSheetOpen(true);
   }
 
-  function applyDiscount(product: Product, discountPercent: number) {
+  async function applyDiscount(product: Product, discountPercent: number) {
+    const updated = await saveProductEdit(String(product.id), {
+      field: "discount",
+      value: discountPercent,
+    })
+    const mapped = mapProduct(updated)
     setProducts((current) =>
-      current.map((item) =>
-        item.id === product.id ? { ...item, discountPercent } : item,
-      ),
-    );
+      current.map((item) => item.id === product.id ? mapped : item),
+    )
+    setSelectedProduct((current) => current?.id === product.id ? mapped : current)
   }
 
   return (
@@ -370,7 +377,7 @@ export function ProductWorkspace() {
           onClick={() => setAddProductOpen(true)}
           aria-label="Add product"
           title="Add product"
-          className="fixed right-5 bottom-5 z-10 grid size-16 place-items-center rounded-md bg-[#ed1c2e] p-0 text-white shadow-lg shadow-red-900/20 transition-transform hover:scale-105 hover:bg-[#d91829] focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/40 focus-visible:ring-offset-2 sm:right-8 sm:bottom-8 sm:size-[4.5rem]"
+          className="fixed right-5 bottom-32 z-10 grid size-16 place-items-center rounded-md bg-[#ed1c2e] p-0 text-white shadow-lg shadow-red-900/20 transition-transform hover:scale-105 hover:bg-[#d91829] focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/40 focus-visible:ring-offset-2 sm:right-8 sm:bottom-24 sm:size-[4.5rem]"
         >
           <PackagePlus className="size-7" aria-hidden="true" />
         </Button>

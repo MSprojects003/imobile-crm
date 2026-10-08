@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation"
 import {
   Boxes,
   ChevronsUpDown,
+  ClipboardCheck,
   ClipboardList,
   CircleUserRound,
   LayoutDashboard,
@@ -50,6 +51,7 @@ import { AccountSheet } from "@/components/custom/dashboard/AccountSheet"
 const navigationItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Reps (Staffs)", href: "/dashboard/reps", icon: UsersRound },
+  { title: "Assigned - Work", href: "/dashboard/assigned-work", icon: ClipboardCheck },
   { title: "Shops", href: "/dashboard/shops", icon: Store },
   { title: "Orders", href: "/dashboard/orders", icon: ClipboardList },
 ]
@@ -72,6 +74,7 @@ export function AppSidebar() {
   const [profile, setProfile] = useState<SidebarProfile | null>(null)
   const [profileError, setProfileError] = useState(false)
   const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false)
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
 
   function closeMobileSidebar() {
     if (isMobile) setOpenMobile(false)
@@ -223,7 +226,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarSeparator className="mx-4 ml-0" />
       <SidebarFooter className="p-1.5">
-        <Menu.Root>
+        <Menu.Root open={isAccountMenuOpen} onOpenChange={setIsAccountMenuOpen}>
           <Menu.Trigger
             aria-label="Open account menu"
             className="flex h-14 w-full items-center gap-3 rounded-md px-2.5 text-left transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30 data-popup-open:bg-slate-100 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
@@ -267,6 +270,7 @@ export function AppSidebar() {
                 <Menu.Item
                   onClick={(e) => {
                     e.preventDefault()
+                    setIsAccountMenuOpen(false)
                     setIsAccountSheetOpen(true)
                     closeMobileSidebar()
                   }}
@@ -275,10 +279,13 @@ export function AppSidebar() {
                   <CircleUserRound className="size-4 text-slate-500" />
                   Account
                 </Menu.Item>
-                                <NotificationsMenuItem />
+                <NotificationsMenuItem onSelect={() => setIsAccountMenuOpen(false)} />
                                 <div className="my-1 border-t border-slate-100" />
                 <Menu.Item
-                  onClick={handleSignOut}
+                  onClick={() => {
+                    setIsAccountMenuOpen(false)
+                    void handleSignOut()
+                  }}
                   className="flex h-10 w-full cursor-default items-center gap-3 rounded-md px-3 text-sm text-[#c82432] outline-none transition-colors hover:bg-red-50 focus-visible:bg-red-50 data-highlighted:bg-red-50"
                 >
                   <LogOut className="size-4" />

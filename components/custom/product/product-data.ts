@@ -17,6 +17,8 @@ export type Product = {
   colors?: string[]
   createdAt?: string
   discountPercent?: number
+  oldPrice?: number | null
+  oldPriceTiers?: { startQty: number; endQty: number | null; price: number }[]
   stock: number
   description: string
 }

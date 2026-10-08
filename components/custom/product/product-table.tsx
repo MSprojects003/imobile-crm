@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Product } from "@/components/custom/product/product-data";
 import type { ProductEdit, ProductFieldEdit } from "@/lib/api/products";
-import { TableSkeleton } from "@/components/custom/dashboard/table-skeleton";
+import { ListPageSkeleton } from "@/components/custom/dashboard/list-page-skeleton";
 import { useCanPerform } from "@/components/custom/dashboard/current-user";
 import { RestrictedAction } from "@/components/custom/dashboard/restricted-action";
 
@@ -73,9 +73,7 @@ function getFieldValue(product: Product, field: EditableField) {
 }
 
 function getFinalPrice(product: Product) {
-  return product.discountPercent
-    ? product.price * (1 - product.discountPercent / 100)
-    : product.price;
+  return product.price
 }
 
 /* -------------------------------------------------------------------------- */
@@ -90,6 +88,7 @@ function EditableCell({
   align = "left",
   numeric = false,
   allowEmpty = false,
+  compact = false,
   options,
 }: {
   product: Product;
@@ -99,6 +98,7 @@ function EditableCell({
   align?: "left" | "right";
   numeric?: boolean;
   allowEmpty?: boolean;
+  compact?: boolean;
   options?: string[];
 }) {
   const [editing, setEditing] = useState(false);
@@ -115,7 +115,7 @@ function EditableCell({
 
   if (!canEdit) {
     return (
-      <div className={`min-w-0 ${align === "right" ? "text-right" : "text-left"} truncate px-2 py-1.5 text-[13px]`}>
+      <div className={`min-w-0 ${align === "right" ? "text-right" : "text-left"} truncate ${compact ? "h-6 px-0 py-0 text-xs leading-6" : "px-2 py-1.5 text-[13px]"}`}>
         {displayValue || <span className="text-slate-400">Empty</span>}
       </div>
     );
@@ -255,7 +255,7 @@ function EditableCell({
                   setDraft(String(getFieldValue(product, field)));
                   setEditing(true);
                 }}
-                className={`block h-8 w-full min-w-0 cursor-text truncate border border-transparent bg-transparent px-2 text-[13px] outline-none focus-visible:rounded-sm focus-visible:border-[#ed1c2e] ${alignClass} ${error ? "text-rose-700" : ""}`}
+                className={`block w-full min-w-0 cursor-text truncate border border-transparent bg-transparent outline-none focus-visible:rounded-sm focus-visible:border-[#ed1c2e] ${compact ? "h-6 px-0 text-xs" : "h-8 px-2 text-[13px]"} ${alignClass} ${error ? "text-rose-700" : ""}`}
               >
                 {saving
                   ? "Saving..."
@@ -348,23 +348,24 @@ function RowActions({
   );
 }
 
-function Thumb({ url }: { url?: string }) {
+function Thumb({ url, className }: { url?: string; className?: string }) {
+  const dimensions = className ?? "size-11";
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
       alt=""
-      className="size-11 shrink-0 rounded-md border border-slate-200 bg-slate-50 object-cover"
+      className={`${dimensions} shrink-0 rounded-md border border-slate-200 bg-slate-50 object-cover`}
     />
   ) : (
-    <span className="grid size-11 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+    <span className={`grid ${dimensions} shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-400`}>
       <ImagePlus className="size-4" aria-hidden="true" />
     </span>
   );
 }
 
 function PriceNote({ product }: { product: Product }) {
-  if (product.pricingType === "bulk") {
+  if (product.pricingType === "bulk" && !product.discountPercent) {
     return (
       <span className="block px-2 text-[10px] font-normal text-slate-400">
         First tier
@@ -372,12 +373,17 @@ function PriceNote({ product }: { product: Product }) {
     );
   }
   if (product.discountPercent) {
+    const previousPrice = product.pricingType === "bulk"
+      ? product.oldPriceTiers?.[0]?.price
+      : product.oldPrice
     return (
       <span className="block px-2 text-[10px] font-normal text-emerald-700">
         {product.discountPercent}% off ·{" "}
-        <span className="text-slate-400 line-through">
-          {currencyFormatter.format(product.price)}
-        </span>
+        {previousPrice != null && previousPrice > 0 ? (
+          <span className="text-slate-400 line-through">
+            {currencyFormatter.format(previousPrice)}
+          </span>
+        ) : null}
       </span>
     );
   }
@@ -400,15 +406,7 @@ export function ProductTable({
   loadError = "",
 }: ProductTableProps) {
   if (isLoading) {
-    return (
-      <TableSkeleton
-        label="products"
-        columns={6}
-        rows={5}
-        className="rounded-lg border-slate-300 shadow-sm"
-        tableClassName="min-w-[860px] border-collapse"
-      />
-    )
+    return <ListPageSkeleton page="products" contentOnly />
   }
 
   const stateMessage = loadError ? (
@@ -572,46 +570,92 @@ export function ProductTable({
             {stateMessage}
           </div>
         ) : (
-          <ul className="divide-y divide-slate-200">
+          <ul className="space-y-2 p-2">
             {products.map((product) => {
               const year = product.manufacturedYear;
               return (
                 <li
                   key={product.id}
-                  className="space-y-3 p-3 odd:bg-white even:bg-slate-50"
+                  className="rounded-md border border-slate-200 bg-white px-2.5 py-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                 >
-                  <div className="flex items-start gap-3">
-                    <Thumb url={product.images?.[0]} />
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <Thumb url={product.images?.[0]} className="h-16 w-12" />
                     <div className="min-w-0 flex-1">
                       <EditableCell
                         product={product}
                         field="name"
                         displayValue={product.name}
                         onEdit={onEdit}
+                        compact
                       />
-                      <div className="flex min-w-0 items-center gap-1">
+                      <div className="flex min-w-0 items-center gap-2">
                         <div className="min-w-0 flex-1">
+                          <EditableCell
+                            product={product}
+                            field="brand"
+                            displayValue={product.brand}
+                            onEdit={onEdit}
+                            compact
+                            options={brands}
+                          />
+                        </div>
+                        <span aria-hidden="true" className="h-3.5 shrink-0 border-l border-slate-300" />
+                        <div className="min-w-0 flex-1">
+                          <EditableCell
+                            product={product}
+                            field="category"
+                            displayValue={product.category}
+                            onEdit={onEdit}
+                            compact
+                            options={categories}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex min-w-0 items-center gap-1 text-[11px] leading-5 text-slate-500">
+                        <div className="min-w-0 flex-1 truncate">
                           <EditableCell
                             product={product}
                             field="sku"
                             displayValue={product.sku}
                             onEdit={onEdit}
+                            compact
                           />
                         </div>
-                        <span className="shrink-0 text-[11px] text-slate-400">
-                          Year
-                        </span>
-                        <div className="w-16 shrink-0">
+                        <span aria-hidden="true" className="shrink-0 text-slate-300">·</span>
+                        <span className="shrink-0 text-slate-400">Year</span>
+                        <div className="w-12 shrink-0">
                           <EditableCell
                             product={product}
                             field="manufactured_year"
                             displayValue={year ? String(year) : "—"}
                             onEdit={onEdit}
+                            compact
                             numeric
                             allowEmpty
                           />
                         </div>
                       </div>
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-1">
+                          <span className="shrink-0 text-[11px] text-slate-500">Price</span>
+                          <div className="min-w-0 font-semibold tabular-nums text-slate-900">
+                            <EditableCell
+                              product={product}
+                              field="price"
+                              displayValue={currencyFormatter.format(
+                                getFinalPrice(product),
+                              )}
+                              onEdit={onEdit}
+                              compact
+                              numeric
+                            />
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[10px] tabular-nums text-slate-400">
+                          Stock: {product.stock}
+                        </span>
+                      </div>
+                      <PriceNote product={product} />
                     </div>
                     <RowActions
                       product={product}
@@ -620,62 +664,6 @@ export function ProductTable({
                       onEditProduct={onEditProduct}
                     />
                   </div>
-
-                  <dl className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 bg-white text-[13px]">
-                    <div className="border-r border-b border-slate-200 p-2">
-                      <dt className="px-2 text-[11px] text-slate-500">
-                        Category
-                      </dt>
-                      <dd>
-                        <EditableCell
-                          product={product}
-                          field="category"
-                          displayValue={product.category}
-                          onEdit={onEdit}
-                          options={categories}
-                        />
-                      </dd>
-                    </div>
-                    <div className="border-b border-slate-200 p-2">
-                      <dt className="px-2 text-[11px] text-slate-500">Brand</dt>
-                      <dd>
-                        <EditableCell
-                          product={product}
-                          field="brand"
-                          displayValue={product.brand}
-                          onEdit={onEdit}
-                          options={brands}
-                        />
-                      </dd>
-                    </div>
-                    <div className="border-r border-slate-200 p-2">
-                      <dt className="px-2 text-[11px] text-slate-500">Price</dt>
-                      <dd className="font-medium tabular-nums">
-                        <EditableCell
-                          product={product}
-                          field="price"
-                          displayValue={currencyFormatter.format(
-                            getFinalPrice(product),
-                          )}
-                          onEdit={onEdit}
-                          numeric
-                        />
-                        <PriceNote product={product} />
-                      </dd>
-                    </div>
-                    <div className="p-2">
-                      <dt className="px-2 text-[11px] text-slate-500">Stock</dt>
-                      <dd className="tabular-nums">
-                        <EditableCell
-                          product={product}
-                          field="stock"
-                          displayValue={String(product.stock)}
-                          onEdit={onEdit}
-                          numeric
-                        />
-                      </dd>
-                    </div>
-                  </dl>
                 </li>
               );
             })}
