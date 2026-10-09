@@ -6,7 +6,13 @@ import { ImagePlus, Plus, Search, Shapes, Tags, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -25,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
+import { DownloadData } from "@/components/custom/dashboard/download/download"
 import { ListPageSkeleton } from "@/components/custom/dashboard/list-page-skeleton"
 import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
 import { supabase } from "@/lib/supabase"
@@ -59,7 +66,8 @@ type CatalogApiRecord = {
 
 async function getAccessToken() {
   const { data, error } = await supabase.auth.getSession()
-  if (error || !data.session) throw new Error("Your session expired. Please sign in again.")
+  if (error || !data.session)
+    throw new Error("Your session expired. Please sign in again.")
   return data.session.access_token
 }
 
@@ -72,7 +80,11 @@ function mapCatalogRecord(row: CatalogApiRecord): CatalogEntry {
     description: row.description ?? "",
     isDeleted: Boolean(row.is_deleted),
     createdAt: row.created_at
-      ? new Date(row.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "short", day: "2-digit" })
+      ? new Date(row.created_at).toLocaleDateString("en-LK", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+        })
       : "—",
   }
 }
@@ -80,7 +92,10 @@ function mapCatalogRecord(row: CatalogApiRecord): CatalogEntry {
 type CategoryTextField = "name" | "description"
 type CategoryUpdateField = CategoryTextField | "image" | "is_deleted"
 
-const tabDetails: Record<CatalogTab, { title: string; singular: string; icon: typeof Shapes }> = {
+const tabDetails: Record<
+  CatalogTab,
+  { title: string; singular: string; icon: typeof Shapes }
+> = {
   categories: { title: "Categories", singular: "category", icon: Shapes },
   brands: { title: "Brands", singular: "brand", icon: Tags },
 }
@@ -110,7 +125,10 @@ function CatalogFields({
   return (
     <div className="space-y-5 pt-5">
       <div className="space-y-2">
-        <label htmlFor={`catalog-name-${tab}`} className="text-xs font-medium text-slate-800">
+        <label
+          htmlFor={`catalog-name-${tab}`}
+          className="text-xs font-medium text-slate-800"
+        >
           {tab === "categories" ? "Category name" : "Brand name"}
         </label>
         <Input
@@ -127,7 +145,10 @@ function CatalogFields({
       </div>
 
       <div className="space-y-2">
-        <label htmlFor={fileInputId} className="text-xs font-medium text-slate-800">
+        <label
+          htmlFor={fileInputId}
+          className="text-xs font-medium text-slate-800"
+        >
           Image
         </label>
         <label
@@ -141,7 +162,9 @@ function CatalogFields({
             <span className="block truncate text-xs font-medium text-slate-700">
               {image?.name ?? "Choose an image"}
             </span>
-            <span className="mt-0.5 block text-xs text-slate-500">PNG, JPG or WEBP</span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              PNG, JPG or WEBP
+            </span>
           </span>
           <Input
             id={fileInputId}
@@ -156,7 +179,10 @@ function CatalogFields({
       </div>
 
       <div className="space-y-2">
-        <label htmlFor={`catalog-description-${tab}`} className="text-xs font-medium text-slate-800">
+        <label
+          htmlFor={`catalog-description-${tab}`}
+          className="text-xs font-medium text-slate-800"
+        >
           Description
         </label>
         <textarea
@@ -181,7 +207,8 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
   const [name, setName] = useState("")
   const [image, setImage] = useState<File | null>(null)
   const [description, setDescription] = useState("")
-  const [entries, setEntries] = useState<Record<CatalogTab, CatalogEntry[]>>(emptyEntries)
+  const [entries, setEntries] =
+    useState<Record<CatalogTab, CatalogEntry[]>>(emptyEntries)
   const [isLoadingCatalog, setIsLoadingCatalog] = useState(true)
   const [catalogLoadError, setCatalogLoadError] = useState("")
   const [formError, setFormError] = useState("")
@@ -193,10 +220,15 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
     const query = search.trim().toLowerCase()
     if (!query) return currentEntries
     return currentEntries.filter((entry) =>
-      [entry.name, entry.description].some((value) => value.toLowerCase().includes(query))
+      [entry.name, entry.description].some((value) =>
+        value.toLowerCase().includes(query)
+      )
     )
   }, [currentEntries, search])
-  const visibleEntries = filteredEntries.slice((page - 1) * pageSize, page * pageSize)
+  const visibleEntries = filteredEntries.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -212,8 +244,16 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
           headers: { Authorization: `Bearer ${accessToken}` },
           cache: "no-store",
         })
-        const result = await response.json() as { categories?: CatalogApiRecord[]; brands?: CatalogApiRecord[]; error?: string }
-        if (!response.ok) throw new Error(result.error ?? `Could not load ${tabDetails[activeTab].title.toLowerCase()}.`)
+        const result = (await response.json()) as {
+          categories?: CatalogApiRecord[]
+          brands?: CatalogApiRecord[]
+          error?: string
+        }
+        if (!response.ok)
+          throw new Error(
+            result.error ??
+              `Could not load ${tabDetails[activeTab].title.toLowerCase()}.`
+          )
         if (cancelled) return
 
         setEntries((current) => ({
@@ -222,7 +262,11 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
         }))
       } catch (error) {
         if (!cancelled) {
-          setCatalogLoadError(error instanceof Error ? error.message : `Could not load ${tabDetails[activeTab].title.toLowerCase()}.`)
+          setCatalogLoadError(
+            error instanceof Error
+              ? error.message
+              : `Could not load ${tabDetails[activeTab].title.toLowerCase()}.`
+          )
         }
       } finally {
         if (!cancelled) setIsLoadingCatalog(false)
@@ -263,9 +307,17 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       })
-      const result = await response.json() as { category?: CatalogApiRecord; brand?: CatalogApiRecord; error?: string }
-      const createdEntry = sheetTab === "categories" ? result.category : result.brand
-      if (!response.ok || !createdEntry) throw new Error(result.error ?? `Could not save the ${tabDetails[sheetTab].singular}.`)
+      const result = (await response.json()) as {
+        category?: CatalogApiRecord
+        brand?: CatalogApiRecord
+        error?: string
+      }
+      const createdEntry =
+        sheetTab === "categories" ? result.category : result.brand
+      if (!response.ok || !createdEntry)
+        throw new Error(
+          result.error ?? `Could not save the ${tabDetails[sheetTab].singular}.`
+        )
 
       setEntries((current) => ({
         ...current,
@@ -275,44 +327,72 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
       setPage(1)
       setOpen(false)
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Could not save this catalog item.")
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Could not save this catalog item."
+      )
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  async function updateCatalogEntry(tab: CatalogTab, id: CatalogEntry["id"], field: CategoryUpdateField, value: string | File) {
+  async function updateCatalogEntry(
+    tab: CatalogTab,
+    id: CatalogEntry["id"],
+    field: CategoryUpdateField,
+    value: string | File
+  ) {
     const accessToken = await getAccessToken()
     const formData = new FormData()
     formData.set(field, value)
 
-    const response = await fetch(`/api/${tab}?id=${encodeURIComponent(String(id))}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: formData,
-    })
-    const result = await response.json() as { category?: CatalogApiRecord; brand?: CatalogApiRecord; error?: string }
+    const response = await fetch(
+      `/api/${tab}?id=${encodeURIComponent(String(id))}`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData,
+      }
+    )
+    const result = (await response.json()) as {
+      category?: CatalogApiRecord
+      brand?: CatalogApiRecord
+      error?: string
+    }
     const updatedRecord = tab === "categories" ? result.category : result.brand
-    if (!response.ok || !updatedRecord) throw new Error(result.error ?? `Could not update the ${tabDetails[tab].singular}.`)
+    if (!response.ok || !updatedRecord)
+      throw new Error(
+        result.error ?? `Could not update the ${tabDetails[tab].singular}.`
+      )
 
     const updatedEntry = mapCatalogRecord(updatedRecord)
     setEntries((current) => ({
       ...current,
-      [tab]: current[tab].map((entry) => entry.id === id ? updatedEntry : entry),
+      [tab]: current[tab].map((entry) =>
+        entry.id === id ? updatedEntry : entry
+      ),
     }))
   }
 
   return (
     <section className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-6">
-      <Tabs value={activeTab} onValueChange={(value) => {
-        setActiveTab(value as CatalogTab)
-        setPage(1)
-      }}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          setActiveTab(value as CatalogTab)
+          setPage(1)
+        }}
+      >
         <div className="sticky -top-5 z-10 -mx-5 -mt-5 flex flex-col gap-4 border-b border-slate-200 bg-background/95 px-5 py-4 backdrop-blur sm:-mx-8 sm:-mt-8 sm:px-8">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0 md:hidden">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">iMobile workspace</p>
-              <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-900">{tabDetails[activeTab].title}</h1>
+              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                iMobile workspace
+              </p>
+              <h1 className="mt-0.5 truncate text-lg font-semibold tracking-tight text-slate-900">
+                {tabDetails[activeTab].title}
+              </h1>
               <p className="mt-0.5 text-xs leading-5 text-slate-500">
                 {activeTab === "categories"
                   ? "Organize products into clear, easy-to-browse categories."
@@ -323,10 +403,13 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 sm:gap-3">
               <label className="relative block min-w-0 flex-1 sm:max-w-sm">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
+                  aria-hidden="true"
+                />
                 <Input
                   aria-label={`Search ${tabDetails[activeTab].title.toLowerCase()}`}
-                  className="h-9 rounded-sm border-slate-200 bg-white pl-9 pr-10 text-[11px] focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+                  className="h-9 rounded-sm border-slate-200 bg-white pr-10 pl-9 text-[11px] focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
                   onChange={(event) => {
                     setSearch(event.target.value)
                     setPage(1)
@@ -348,19 +431,43 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
                   </button>
                 )}
               </label>
-              <RestrictedAction action={activeTab === "categories" ? "addCategory" : "addBrands"}>
+              <RestrictedAction
+                action={
+                  activeTab === "categories" ? "addCategory" : "addBrands"
+                }
+              >
                 <Button
                   type="button"
                   onClick={openAddSheet}
                   className="h-9 shrink-0 gap-2 bg-[#ed1c2e] px-3 text-xs text-white hover:bg-[#d91829] md:ml-auto"
                 >
                   <Plus className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Add {tabDetails[activeTab].singular}</span>
+                  <span className="hidden sm:inline">
+                    Add {tabDetails[activeTab].singular}
+                  </span>
                   <span className="sm:hidden">Add</span>
                 </Button>
               </RestrictedAction>
+              <DownloadData
+                key={activeTab}
+                data={visibleEntries}
+                filename={activeTab}
+                label={`Download ${tabDetails[activeTab].title.toLowerCase()}`}
+                itemLabel={activeTab === "categories" ? "category" : "brand"}
+                sheetName={tabDetails[activeTab].title}
+                columns={[
+                  { header: "Name", value: (entry) => entry.name },
+                  {
+                    header: "Description",
+                    value: (entry) => entry.description,
+                  },
+                  { header: "Added", value: (entry) => entry.createdAt },
+                ]}
+              />
             </div>
-            <span className="whitespace-nowrap text-xs tabular-nums text-slate-500 sm:hidden">{filteredEntries.length} items</span>
+            <span className="text-xs whitespace-nowrap text-slate-500 tabular-nums sm:hidden">
+              {filteredEntries.length} items
+            </span>
           </div>
         </div>
 
@@ -370,7 +477,9 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
               tab="categories"
               entries={visibleEntries}
               searchTerm={search}
-              onUpdateEntry={(id, field, value) => updateCatalogEntry("categories", id, field, value)}
+              onUpdateEntry={(id, field, value) =>
+                updateCatalogEntry("categories", id, field, value)
+              }
               isLoading={isLoadingCatalog}
               error={catalogLoadError}
             />
@@ -380,7 +489,9 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
               tab="brands"
               entries={visibleEntries}
               searchTerm={search}
-              onUpdateEntry={(id, field, value) => updateCatalogEntry("brands", id, field, value)}
+              onUpdateEntry={(id, field, value) =>
+                updateCatalogEntry("brands", id, field, value)
+              }
               isLoading={isLoadingCatalog}
               error={catalogLoadError}
             />
@@ -397,7 +508,10 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
       />
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-sm">
+        <SheetContent
+          side="right"
+          className="w-full gap-0 overflow-hidden p-0 sm:max-w-sm"
+        >
           <Tabs
             value={sheetTab}
             onValueChange={(value) => {
@@ -411,17 +525,29 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
           >
             <SheetHeader className="border-b border-slate-200 px-5 py-5 sm:px-6">
               <SheetTitle className="text-sm">Add to catalog</SheetTitle>
-              <SheetDescription>Choose a catalog type, then enter its details.</SheetDescription>
+              <SheetDescription>
+                Choose a catalog type, then enter its details.
+              </SheetDescription>
               <TabsList className="mt-4 w-full text-xs">
-                <TabsTab value="categories" className="flex-1 text-xs">Categories</TabsTab>
-                <TabsTab value="brands" className="flex-1 text-xs">Brands</TabsTab>
+                <TabsTab value="categories" className="flex-1 text-xs">
+                  Categories
+                </TabsTab>
+                <TabsTab value="brands" className="flex-1 text-xs">
+                  Brands
+                </TabsTab>
               </TabsList>
             </SheetHeader>
 
-            <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+            <form
+              className="flex min-h-0 flex-1 flex-col"
+              onSubmit={handleSubmit}
+            >
               <div className="flex-1 overflow-y-auto px-5 pb-6 sm:px-6">
                 {formError && (
-                  <p className="mt-5 rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700" role="alert">
+                  <p
+                    className="mt-5 rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700"
+                    role="alert"
+                  >
                     {formError}
                   </p>
                 )}
@@ -451,12 +577,23 @@ export function CatalogWorkspace({ initialTab }: { initialTab: CatalogTab }) {
                 </TabsPanel>
               </div>
               <SheetFooter className="flex-row justify-end border-t border-slate-200 bg-white px-5 py-4 sm:px-6">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="text-xs">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  className="text-xs"
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="gap-2 bg-[#ed1c2e] text-xs text-white hover:bg-[#d91829]">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="gap-2 bg-[#ed1c2e] text-xs text-white hover:bg-[#d91829]"
+                >
                   <Plus className="size-4" aria-hidden="true" />
-                  {isSubmitting ? "Saving..." : `Add ${tabDetails[sheetTab].singular}`}
+                  {isSubmitting
+                    ? "Saving..."
+                    : `Add ${tabDetails[sheetTab].singular}`}
                 </Button>
               </SheetFooter>
             </form>
@@ -478,7 +615,11 @@ function CatalogList({
   tab: CatalogTab
   entries: CatalogEntry[]
   searchTerm: string
-  onUpdateEntry?: (id: CatalogEntry["id"], field: CategoryUpdateField, value: string | File) => Promise<void>
+  onUpdateEntry?: (
+    id: CatalogEntry["id"],
+    field: CategoryUpdateField,
+    value: string | File
+  ) => Promise<void>
   isLoading?: boolean
   error?: string
 }) {
@@ -489,84 +630,137 @@ function CatalogList({
   }
 
   return (
-    <section aria-label={title} className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03]">
+    <section
+      aria-label={title}
+      className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03]"
+    >
       <div className="hidden md:block">
-      <Table className="text-xs">
-        <TableHeader className="bg-slate-50">
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="min-w-48 pl-5 text-xs font-semibold text-slate-500">Name</TableHead>
-            <TableHead className="min-w-24 text-xs font-semibold text-slate-500">Image</TableHead>
-            <TableHead className="min-w-64 text-xs font-semibold text-slate-500">Description</TableHead>
-            <TableHead className="min-w-32 text-xs font-semibold text-slate-500">Created</TableHead>
-            <TableHead className="min-w-32 text-xs font-semibold text-slate-500">Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {error ? (
-            <TableRow><TableCell colSpan={5} className="h-24 text-center text-xs text-rose-700">Could not load {title.toLowerCase()}: {error}</TableCell></TableRow>
-          ) : entries.map((entry) => (
-            <TableRow key={entry.id} className="group">
-              <CatalogEntryCells entry={entry} onUpdateCategory={onUpdateEntry} />
-              <TableCell className="whitespace-nowrap text-slate-600">{entry.createdAt}</TableCell>
-              <CatalogStatusCell entry={entry} onUpdateCategory={onUpdateEntry} />
+        <Table className="text-xs">
+          <TableHeader className="bg-slate-50">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="min-w-48 pl-5 text-xs font-semibold text-slate-500">
+                Name
+              </TableHead>
+              <TableHead className="min-w-24 text-xs font-semibold text-slate-500">
+                Image
+              </TableHead>
+              <TableHead className="min-w-64 text-xs font-semibold text-slate-500">
+                Description
+              </TableHead>
+              <TableHead className="min-w-32 text-xs font-semibold text-slate-500">
+                Created
+              </TableHead>
+              <TableHead className="min-w-32 text-xs font-semibold text-slate-500">
+                Status
+              </TableHead>
             </TableRow>
-          ))}
-          {!error && entries.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={5} className="h-28 text-center">
-                <p className="text-xs font-medium text-slate-700">
-                  {searchTerm.trim() ? `No ${title.toLowerCase()} match “${searchTerm.trim()}”` : `No ${singular}s found`}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {searchTerm.trim() ? "Try a different search." : `Add your first ${singular} to get started.`}
-                </p>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {error ? (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-xs text-rose-700"
+                >
+                  Could not load {title.toLowerCase()}: {error}
+                </TableCell>
+              </TableRow>
+            ) : (
+              entries.map((entry) => (
+                <TableRow key={entry.id} className="group">
+                  <CatalogEntryCells
+                    entry={entry}
+                    onUpdateCategory={onUpdateEntry}
+                  />
+                  <TableCell className="whitespace-nowrap text-slate-600">
+                    {entry.createdAt}
+                  </TableCell>
+                  <CatalogStatusCell
+                    entry={entry}
+                    onUpdateCategory={onUpdateEntry}
+                  />
+                </TableRow>
+              ))
+            )}
+            {!error && entries.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="h-28 text-center">
+                  <p className="text-xs font-medium text-slate-700">
+                    {searchTerm.trim()
+                      ? `No ${title.toLowerCase()} match “${searchTerm.trim()}”`
+                      : `No ${singular}s found`}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {searchTerm.trim()
+                      ? "Try a different search."
+                      : `Add your first ${singular} to get started.`}
+                  </p>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
       <div className="space-y-2 p-2 md:hidden">
         {error ? (
-          <p role="alert" className="px-3 py-8 text-center text-xs text-rose-700">
+          <p
+            role="alert"
+            className="px-3 py-8 text-center text-xs text-rose-700"
+          >
             Could not load {title.toLowerCase()}: {error}
           </p>
         ) : entries.length === 0 ? (
           <div className="px-3 py-8 text-center">
             <p className="text-xs font-medium text-slate-700">
-              {searchTerm.trim() ? `No ${title.toLowerCase()} match “${searchTerm.trim()}”` : `No ${singular}s found`}
+              {searchTerm.trim()
+                ? `No ${title.toLowerCase()} match “${searchTerm.trim()}”`
+                : `No ${singular}s found`}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              {searchTerm.trim() ? "Try a different search." : `Add your first ${singular} to get started.`}
+              {searchTerm.trim()
+                ? "Try a different search."
+                : `Add your first ${singular} to get started.`}
             </p>
           </div>
-        ) : entries.map((entry) => (
-          <article key={entry.id} className="flex min-w-0 items-start gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            {entry.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={entry.imageUrl}
-                alt={`${entry.name} ${singular}`}
-                loading="lazy"
-                className="size-14 shrink-0 rounded-md border border-slate-200 bg-slate-50 object-cover"
-              />
-            ) : (
-              <span className="grid size-14 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
-                <Icon className="size-5" aria-hidden="true" />
-              </span>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-start justify-between gap-2">
-                <h2 className="min-w-0 truncate text-xs font-semibold text-slate-900">{entry.name}</h2>
-                <CatalogMobileStatus entry={entry} onUpdateCategory={onUpdateEntry} />
+        ) : (
+          entries.map((entry) => (
+            <article
+              key={entry.id}
+              className="flex min-w-0 items-start gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            >
+              {entry.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={entry.imageUrl}
+                  alt={`${entry.name} ${singular}`}
+                  loading="lazy"
+                  className="size-14 shrink-0 rounded-md border border-slate-200 bg-slate-50 object-cover"
+                />
+              ) : (
+                <span className="grid size-14 shrink-0 place-items-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+                  <Icon className="size-5" aria-hidden="true" />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-start justify-between gap-2">
+                  <h2 className="min-w-0 truncate text-xs font-semibold text-slate-900">
+                    {entry.name}
+                  </h2>
+                  <CatalogMobileStatus
+                    entry={entry}
+                    onUpdateCategory={onUpdateEntry}
+                  />
+                </div>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-4 break-words whitespace-pre-wrap text-slate-600">
+                  {entry.description || "No description provided."}
+                </p>
+                <p className="mt-2 text-[10px] text-slate-400">
+                  Created {entry.createdAt}
+                </p>
               </div>
-              <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-[11px] leading-4 text-slate-600">
-                {entry.description || "No description provided."}
-              </p>
-              <p className="mt-2 text-[10px] text-slate-400">Created {entry.createdAt}</p>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))
+        )}
       </div>
     </section>
   )
@@ -577,9 +771,15 @@ function CatalogEntryCells({
   onUpdateCategory,
 }: {
   entry: CatalogEntry
-  onUpdateCategory?: (id: CatalogEntry["id"], field: CategoryUpdateField, value: string | File) => Promise<void>
+  onUpdateCategory?: (
+    id: CatalogEntry["id"],
+    field: CategoryUpdateField,
+    value: string | File
+  ) => Promise<void>
 }) {
-  const [editingField, setEditingField] = useState<CategoryTextField | null>(null)
+  const [editingField, setEditingField] = useState<CategoryTextField | null>(
+    null
+  )
   const [draft, setDraft] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
@@ -618,7 +818,11 @@ function CatalogEntryCells({
       await onUpdateCategory(entry.id, field, value)
       setEditingField(null)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Could not update this category.")
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Could not update this category."
+      )
     } finally {
       setIsSaving(false)
     }
@@ -631,13 +835,19 @@ function CatalogEntryCells({
     try {
       await onUpdateCategory(entry.id, "image", file)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Could not update this category image.")
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Could not update this category image."
+      )
     } finally {
       setIsSaving(false)
     }
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     if (event.key === "Escape") {
       cancelBlurRef.current = true
       setEditingField(null)
@@ -666,16 +876,22 @@ function CatalogEntryCells({
             onKeyDown={handleKeyDown}
             value={draft}
           />
+        ) : isEditable ? (
+          <button
+            type="button"
+            className="max-w-full cursor-text text-left"
+            onClick={() => beginEditing("name", entry.name)}
+          >
+            {entry.name}
+          </button>
         ) : (
-          isEditable ? (
-            <button type="button" className="max-w-full cursor-text text-left" onClick={() => beginEditing("name", entry.name)}>
-              {entry.name}
-            </button>
-          ) : entry.name
+          entry.name
         )}
       </TableCell>
       <TableCell>
-        <label className={`inline-flex cursor-pointer ${isSaving ? "pointer-events-none opacity-60" : ""}`}>
+        <label
+          className={`inline-flex cursor-pointer ${isSaving ? "pointer-events-none opacity-60" : ""}`}
+        >
           <input
             accept="image/png,image/jpeg,image/webp"
             aria-label={`Change ${entry.name} image`}
@@ -714,14 +930,22 @@ function CatalogEntryCells({
             onKeyDown={handleKeyDown}
             value={draft}
           />
+        ) : isEditable ? (
+          <button
+            type="button"
+            className="max-w-80 cursor-text truncate text-left"
+            onClick={() => beginEditing("description", entry.description)}
+          >
+            {entry.description || "Add description"}
+          </button>
         ) : (
-          isEditable ? (
-            <button type="button" className="max-w-80 cursor-text truncate text-left" onClick={() => beginEditing("description", entry.description)}>
-              {entry.description || "Add description"}
-            </button>
-          ) : entry.description
+          entry.description
         )}
-        {error && <p className="mt-1 max-w-64 text-xs text-rose-700" role="alert">{error}</p>}
+        {error && (
+          <p className="mt-1 max-w-64 text-xs text-rose-700" role="alert">
+            {error}
+          </p>
+        )}
       </TableCell>
     </>
   )
@@ -732,7 +956,11 @@ function CatalogStatusCell({
   onUpdateCategory,
 }: {
   entry: CatalogEntry
-  onUpdateCategory?: (id: CatalogEntry["id"], field: CategoryUpdateField, value: string | File) => Promise<void>
+  onUpdateCategory?: (
+    id: CatalogEntry["id"],
+    field: CategoryUpdateField,
+    value: string | File
+  ) => Promise<void>
 }) {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
@@ -746,7 +974,11 @@ function CatalogStatusCell({
     try {
       await onUpdateCategory(entry.id, "is_deleted", value)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Could not update category status.")
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Could not update category status."
+      )
     } finally {
       setIsSaving(false)
     }
@@ -766,9 +998,18 @@ function CatalogStatusCell({
           <option value="true">Deactive</option>
         </select>
       ) : (
-        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">Active</Badge>
+        <Badge
+          variant="outline"
+          className="border-emerald-200 bg-emerald-50 text-emerald-700"
+        >
+          Active
+        </Badge>
       )}
-      {error && <p className="mt-1 max-w-40 text-xs text-rose-700" role="alert">{error}</p>}
+      {error && (
+        <p className="mt-1 max-w-40 text-xs text-rose-700" role="alert">
+          {error}
+        </p>
+      )}
     </TableCell>
   )
 }
@@ -778,7 +1019,11 @@ function CatalogMobileStatus({
   onUpdateCategory,
 }: {
   entry: CatalogEntry
-  onUpdateCategory?: (id: CatalogEntry["id"], field: CategoryUpdateField, value: string | File) => Promise<void>
+  onUpdateCategory?: (
+    id: CatalogEntry["id"],
+    field: CategoryUpdateField,
+    value: string | File
+  ) => Promise<void>
 }) {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
@@ -791,7 +1036,11 @@ function CatalogMobileStatus({
     try {
       await onUpdateCategory(entry.id, "is_deleted", value)
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Could not update status.")
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Could not update status."
+      )
     } finally {
       setIsSaving(false)
     }
@@ -801,9 +1050,11 @@ function CatalogMobileStatus({
     return (
       <Badge
         variant="outline"
-        className={`shrink-0 ${isDeleted
-          ? "border-slate-200 bg-slate-50 text-slate-600"
-          : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+        className={`shrink-0 ${
+          isDeleted
+            ? "border-slate-200 bg-slate-50 text-slate-600"
+            : "border-emerald-200 bg-emerald-50 text-emerald-700"
+        }`}
       >
         {isDeleted ? "Deactive" : "Active"}
       </Badge>
@@ -821,18 +1072,33 @@ function CatalogMobileStatus({
       >
         <SelectTrigger
           aria-label={`${entry.name} status`}
-          className={`h-6 min-w-0 gap-1 rounded-full px-2 text-[10px] font-medium shadow-none ${isDeleted
-            ? "border-slate-200 bg-slate-50 text-slate-600"
-            : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+          className={`h-6 min-w-0 gap-1 rounded-full px-2 text-[10px] font-medium shadow-none ${
+            isDeleted
+              ? "border-slate-200 bg-slate-50 text-slate-600"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+          }`}
         >
-          <SelectValue>{(value) => value === "true" ? "Deactive" : "Active"}</SelectValue>
+          <SelectValue>
+            {(value) => (value === "true" ? "Deactive" : "Active")}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="false" className="text-xs">Active</SelectItem>
-          <SelectItem value="true" className="text-xs">Deactive</SelectItem>
+          <SelectItem value="false" className="text-xs">
+            Active
+          </SelectItem>
+          <SelectItem value="true" className="text-xs">
+            Deactive
+          </SelectItem>
         </SelectContent>
       </Select>
-      {error && <p role="alert" className="mt-1 max-w-24 text-right text-[10px] text-rose-700">{error}</p>}
+      {error && (
+        <p
+          role="alert"
+          className="mt-1 max-w-24 text-right text-[10px] text-rose-700"
+        >
+          {error}
+        </p>
+      )}
     </div>
   )
 }

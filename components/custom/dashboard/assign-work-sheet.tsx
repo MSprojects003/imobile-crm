@@ -26,8 +26,15 @@ import {
   fetchAssignmentOptions,
 } from "@/lib/assigned-works"
 import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
+import { VoiceText } from "@/components/custom/dashboard/Voice-text"
 
-const workDetails = ["Shop visit", "Product audit", "Stock check", "Order delivery", "Other"]
+const workDetails = [
+  "Shop visit",
+  "Product audit",
+  "Stock check",
+  "Order delivery",
+  "Other",
+]
 
 export function AssignWorkSheet() {
   const queryClient = useQueryClient()
@@ -74,7 +81,9 @@ export function AssignWorkSheet() {
     event.preventDefault()
     const message = work === "Other" ? customWork.trim() : work
     if (!staffId || !work || !shopId || !message) {
-      setFormError("Complete the staff, work details, and shop fields to continue.")
+      setFormError(
+        "Complete the staff, work details, and shop fields to continue."
+      )
       return
     }
 
@@ -124,29 +133,48 @@ export function AssignWorkSheet() {
             </SheetDescription>
           </SheetHeader>
 
-          <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <form
+            className="flex min-h-0 flex-1 flex-col"
+            onSubmit={handleSubmit}
+          >
             <div
               className="flex-1 space-y-5 overflow-y-auto px-5 py-6 sm:px-6"
               aria-busy={isLoadingOptions}
             >
               {formError && (
-                <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700" role="alert">
+                <p
+                  className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+                  role="alert"
+                >
                   {formError}
                 </p>
               )}
               {createMutation.isError && (
-                <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700" role="alert">
-                  {createMutation.error instanceof Error ? createMutation.error.message : "Could not assign work."}
+                <p
+                  className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+                  role="alert"
+                >
+                  {createMutation.error instanceof Error
+                    ? createMutation.error.message
+                    : "Could not assign work."}
                 </p>
               )}
               {optionsQuery.isError && (
-                <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700" role="alert">
-                  {optionsQuery.error instanceof Error ? optionsQuery.error.message : "Could not load assignment options."}
+                <p
+                  className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+                  role="alert"
+                >
+                  {optionsQuery.error instanceof Error
+                    ? optionsQuery.error.message
+                    : "Could not load assignment options."}
                 </p>
               )}
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-800" htmlFor="assign-rep">
+                <label
+                  className="text-xs font-medium text-slate-800"
+                  htmlFor="assign-rep"
+                >
                   Staff
                 </label>
                 {isLoadingOptions ? (
@@ -159,12 +187,19 @@ export function AssignWorkSheet() {
                       setFormError("")
                     }}
                   >
-                    <SelectTrigger id="assign-rep" className="h-9 w-full min-w-0 text-xs">
+                    <SelectTrigger
+                      id="assign-rep"
+                      className="h-9 w-full min-w-0 text-xs"
+                    >
                       <SelectValue placeholder="Select staff" />
                     </SelectTrigger>
                     <SelectContent>
                       {(optionsQuery.data?.staff ?? []).map((member) => (
-                        <SelectItem key={member.id} value={member.id} className="text-xs">
+                        <SelectItem
+                          key={member.id}
+                          value={member.id}
+                          className="text-xs"
+                        >
                           {member.fullName} ({member.staffId})
                         </SelectItem>
                       ))}
@@ -174,7 +209,10 @@ export function AssignWorkSheet() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-800" htmlFor="assign-work">
+                <label
+                  className="text-xs font-medium text-slate-800"
+                  htmlFor="assign-work"
+                >
                   Work details
                 </label>
                 {isLoadingOptions ? (
@@ -187,12 +225,19 @@ export function AssignWorkSheet() {
                       setFormError("")
                     }}
                   >
-                    <SelectTrigger id="assign-work" className="h-9 w-full min-w-0 text-xs">
+                    <SelectTrigger
+                      id="assign-work"
+                      className="h-9 w-full min-w-0 text-xs"
+                    >
                       <SelectValue placeholder="Select work details" />
                     </SelectTrigger>
                     <SelectContent>
                       {workDetails.map((option) => (
-                        <SelectItem key={option} value={option} className="text-xs">
+                        <SelectItem
+                          key={option}
+                          value={option}
+                          className="text-xs"
+                        >
                           {option}
                         </SelectItem>
                       ))}
@@ -203,14 +248,17 @@ export function AssignWorkSheet() {
 
               {work === "Other" && (
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-slate-800" htmlFor="assign-custom-work">
+                  <label
+                    className="text-xs font-medium text-slate-800"
+                    htmlFor="assign-custom-work"
+                  >
                     Custom work details
                   </label>
-                  <textarea
+                  <VoiceText
                     id="assign-custom-work"
-                    className="min-h-28 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-800 shadow-sm outline-none placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30"
-                    onChange={(event) => {
-                      setCustomWork(event.target.value)
+                    className="focus-visible:ring-0"
+                    onChange={(value) => {
+                      setCustomWork(value)
                       setFormError("")
                     }}
                     maxLength={2000}
@@ -222,7 +270,10 @@ export function AssignWorkSheet() {
               )}
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-800" htmlFor="assign-shop">
+                <label
+                  className="text-xs font-medium text-slate-800"
+                  htmlFor="assign-shop"
+                >
                   Shop
                 </label>
                 {isLoadingOptions ? (
@@ -235,12 +286,19 @@ export function AssignWorkSheet() {
                       setFormError("")
                     }}
                   >
-                    <SelectTrigger id="assign-shop" className="h-9 w-full min-w-0 text-xs">
+                    <SelectTrigger
+                      id="assign-shop"
+                      className="h-9 w-full min-w-0 text-xs"
+                    >
                       <SelectValue placeholder="Select a shop" />
                     </SelectTrigger>
                     <SelectContent>
                       {(optionsQuery.data?.shops ?? []).map((shop) => (
-                        <SelectItem key={shop.id} value={shop.id} className="text-xs">
+                        <SelectItem
+                          key={shop.id}
+                          value={shop.id}
+                          className="text-xs"
+                        >
                           {shop.name}
                         </SelectItem>
                       ))}
@@ -282,7 +340,8 @@ export function AssignWorkSheet() {
           role="status"
           aria-live="polite"
           className={`fixed right-4 bottom-4 z-[120] rounded-md border bg-white px-4 py-3 text-xs font-medium shadow-lg sm:right-8 sm:bottom-8 ${
-            toastMessage.includes("could not") || toastMessage.includes("could not be saved")
+            toastMessage.includes("could not") ||
+            toastMessage.includes("could not be saved")
               ? "border-amber-200 text-amber-800"
               : "border-emerald-200 text-emerald-800"
           }`}

@@ -5,12 +5,15 @@ export const dashboardActions = [
   "viewStaff",
   "addStaff",
   "updateStaff",
+  "manageMonthlyTargets",
   "viewProducts",
   "addProducts",
   "editProducts",
   "addCategory",
   "addBrands",
   "viewShops",
+  "viewOrders",
+  "updateOrders",
   "updateShops",
   "viewNotifications",
   "assignWork",
@@ -29,12 +32,15 @@ export const subAdminLimits: Record<DashboardAction, boolean> = {
   viewStaff: true,
   addStaff: false,
   updateStaff: false,
+  manageMonthlyTargets: false,
   viewProducts: true,
   addProducts: false,
   editProducts: false,
   addCategory: true,
   addBrands: true,
   viewShops: true,
+  viewOrders: true,
+  updateOrders: false,
   updateShops: false,
   viewNotifications: true,
   assignWork: false,
@@ -51,7 +57,7 @@ export function getDashboardRole(flags: {
 
 export function canPerformDashboardAction(
   role: DashboardRole | null | undefined,
-  action: DashboardAction,
+  action: DashboardAction
 ) {
   if (role === "admin") return true
   if (role === "sub_admin") return subAdminLimits[action]

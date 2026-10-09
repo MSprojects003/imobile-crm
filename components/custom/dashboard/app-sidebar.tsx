@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   Boxes,
@@ -46,7 +46,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { truncatePhone } from "@/lib/user-limits"
 import { NotificationsMenuItem } from "./Notifications"
-import { AccountSheet } from "@/components/custom/dashboard/AccountSheet"
+import { ProfileSheet } from "@/components/custom/dashboard/profile/sheet"
 
 const navigationItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -68,17 +68,39 @@ type SidebarProfile = {
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { isMobile, setOpenMobile } = useSidebar()
+  const { isMobile, openMobile, setOpenMobile } = useSidebar()
   const isProductsSection = ["/dashboard/products", "/dashboard/categories", "/dashboard/brands"].includes(pathname)
   const [expandedGroups, setExpandedGroups] = useState<string[]>(isProductsSection ? ["products"] : [])
   const [profile, setProfile] = useState<SidebarProfile | null>(null)
   const [profileError, setProfileError] = useState(false)
-  const [isAccountSheetOpen, setIsAccountSheetOpen] = useState(false)
+  const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false)
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
+  const [pendingSheet, setPendingSheet] = useState<
+    "profile" | "notifications" | null
+  >(null)
+  const openNotificationsRef = useRef<(() => void) | null>(null)
 
   function closeMobileSidebar() {
     if (isMobile) setOpenMobile(false)
   }
+
+  useEffect(() => {
+    if (!pendingSheet || openMobile) return
+
+    const timeoutId = window.setTimeout(() => {
+      const sheetToOpen = pendingSheet
+      setPendingSheet(null)
+
+      if (sheetToOpen === "profile") {
+        setIsProfileSheetOpen(true)
+      } else {
+        openNotificationsRef.current?.()
+        openNotificationsRef.current = null
+      }
+    }, 250)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [openMobile, pendingSheet])
 
   useEffect(() => {
     if (isProductsSection) setExpandedGroups(["products"])
@@ -138,6 +160,7 @@ export function AppSidebar() {
   }
 
   return (
+    <>
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader className="h-16 justify-center px-5">
         <Link href="/dashboard" onClick={closeMobileSidebar} className="flex h-full items-center overflow-hidden">
@@ -271,15 +294,30 @@ export function AppSidebar() {
                   onClick={(e) => {
                     e.preventDefault()
                     setIsAccountMenuOpen(false)
-                    setIsAccountSheetOpen(true)
-                    closeMobileSidebar()
+                    if (isMobile && openMobile) {
+                      setPendingSheet("profile")
+                      closeMobileSidebar()
+                    } else {
+                      setIsProfileSheetOpen(true)
+                    }
                   }}
                   className="flex h-10 items-center gap-3 rounded-md px-3 text-sm outline-none transition-colors hover:bg-slate-100 focus-visible:bg-slate-100 data-highlighted:bg-slate-100 cursor-pointer"
                 >
                   <CircleUserRound className="size-4 text-slate-500" />
                   Account
                 </Menu.Item>
-                <NotificationsMenuItem onSelect={() => setIsAccountMenuOpen(false)} />
+                <NotificationsMenuItem
+                  onSelect={(openNotifications) => {
+                    setIsAccountMenuOpen(false)
+                    if (isMobile && openMobile) {
+                      openNotificationsRef.current = openNotifications
+                      setPendingSheet("notifications")
+                      closeMobileSidebar()
+                    } else {
+                      openNotifications()
+                    }
+                  }}
+                />
                                 <div className="my-1 border-t border-slate-100" />
                 <Menu.Item
                   onClick={() => {
@@ -296,7 +334,8 @@ export function AppSidebar() {
           </Menu.Portal>
         </Menu.Root>
       </SidebarFooter>
-      <AccountSheet open={isAccountSheetOpen} onOpenChange={setIsAccountSheetOpen} />
     </Sidebar>
+    <ProfileSheet open={isProfileSheetOpen} onOpenChange={setIsProfileSheetOpen} />
+    </>
   )
 }

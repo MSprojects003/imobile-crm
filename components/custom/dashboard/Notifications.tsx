@@ -22,7 +22,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs"
-import { useSidebar } from "@/components/ui/sidebar"
 import {
   fetchAdminNotifications,
   getAdminNotificationUserId,
@@ -140,16 +139,17 @@ function UnreadBadge({ count }: { count: number }) {
   )
 }
 
-export function NotificationsMenuItem({ onSelect }: { onSelect: () => void }) {
+export function NotificationsMenuItem({
+  onSelect,
+}: {
+  onSelect: (openNotifications: () => void) => void
+}) {
   const { setOpen, unreadCount } = useNotifications()
-  const { isMobile, setOpenMobile } = useSidebar()
 
   return (
     <Menu.Item
       onClick={() => {
-        setOpen(true)
-        onSelect()
-        if (isMobile) setOpenMobile(false)
+        onSelect(() => setOpen(true))
       }}
       className="flex h-10 w-full cursor-default items-center gap-3 rounded-md px-3 text-sm outline-none transition-colors hover:bg-slate-100 focus-visible:bg-slate-100 data-highlighted:bg-slate-100"
     >

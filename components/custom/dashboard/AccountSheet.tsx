@@ -1,6 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react"
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from "react"
 import { differenceInYears, format } from "date-fns"
 import PhoneInput, {
   formatPhoneNumberIntl,
@@ -21,6 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase"
+import { readNicFromImage } from "@/lib/nic-ocr"
 
 export type AccountProfile = {
   userId: string
@@ -65,7 +72,7 @@ function FieldRow({
 }) {
   return (
     <div className="flex flex-col gap-1 border-b border-slate-100 py-2.5 last:border-0 sm:flex-row sm:items-start sm:gap-4">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:w-24 sm:shrink-0 sm:pt-1.5">
+      <div className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase sm:w-24 sm:shrink-0 sm:pt-1.5">
         {label}
       </div>
       <div className="min-w-0 flex-1">
@@ -182,7 +189,9 @@ export function AccountSheet({
     }
 
     const current =
-      editField === "phone" ? toE164(profile.phone) : ((profile[editField] as string | null) ?? "")
+      editField === "phone"
+        ? toE164(profile.phone)
+        : ((profile[editField] as string | null) ?? "")
     if (current === value) {
       cancelEdit()
       return
@@ -194,16 +203,23 @@ export function AccountSheet({
 
   async function simulateNicScan(file: File) {
     if (!profile) return
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image of the front of your NIC.")
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("The NIC image must be 10 MB or smaller.")
+      return
+    }
+
     setIsSaving(true)
     setError("")
     try {
-      // Simulated OCR delay – replace with a real scan call.
-      void file
-      await new Promise((r) => setTimeout(r, 1500))
-      const simulatedNic = "9" + Math.floor(Math.random() * 100000000) + "V"
-      await saveField("nic", simulatedNic)
+      const scannedNic = await readNicFromImage(file)
+      await saveField("nic", scannedNic)
     } catch (err) {
       setError("Failed to scan NIC: " + errorMessage(err, "Unknown error"))
+    } finally {
       setIsSaving(false)
     }
   }
@@ -225,7 +241,11 @@ export function AccountSheet({
           disabled={isSaving}
           aria-label="Save"
         >
-          {isSaving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+          {isSaving ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Check className="size-3.5" />
+          )}
         </Button>
         <Button
           type="button"
@@ -253,7 +273,9 @@ export function AccountSheet({
   }) {
     return (
       <div className="flex min-h-8 items-center justify-between gap-3">
-        <span className={`break-words text-xs ${text ? "text-slate-800" : "italic text-slate-400"}`}>
+        <span
+          className={`text-xs break-words ${text ? "text-slate-800" : "text-slate-400 italic"}`}
+        >
           {text || (field ? placeholder : "—")}
         </span>
         {field && (
@@ -271,7 +293,11 @@ export function AccountSheet({
     )
   }
 
-  function renderTextField(label: string, field: "fullName" | "address" | "dob", placeholder: string) {
+  function renderTextField(
+    label: string,
+    field: "fullName" | "address" | "dob",
+    placeholder: string
+  ) {
     const isEditing = editField === field
     const raw = (profile?.[field] as string | null) ?? ""
     const display =
@@ -305,7 +331,9 @@ export function AccountSheet({
     )
   }
 
-  const initial = (profile?.fullName || profile?.username || "?").charAt(0).toUpperCase()
+  const initial = (profile?.fullName || profile?.username || "?")
+    .charAt(0)
+    .toUpperCase()
   const phoneE164 = toE164(profile?.phone)
 
   return (
@@ -362,9 +390,11 @@ export function AccountSheet({
                 <h2 className="truncate text-sm font-semibold text-slate-900">
                   {profile.fullName || profile.username}
                 </h2>
-                <p className="truncate text-[11px] text-slate-500">@{profile.username}</p>
+                <p className="truncate text-[11px] text-slate-500">
+                  @{profile.username}
+                </p>
                 {profile.role && (
-                  <span className="mt-1.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-600">
+                  <span className="mt-1.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 capitalize">
                     {profile.role}
                   </span>
                 )}
@@ -373,7 +403,7 @@ export function AccountSheet({
 
             {/* Personal information */}
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <h3 className="border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <h3 className="border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
                 Personal information
               </h3>
               <div className="px-4">
@@ -383,7 +413,10 @@ export function AccountSheet({
                   <ValueDisplay text={profile.username} />
                 </FieldRow>
 
-                <FieldRow label="Phone" hint={editField === "phone" ? fieldError : undefined}>
+                <FieldRow
+                  label="Phone"
+                  hint={editField === "phone" ? fieldError : undefined}
+                >
                   {editField === "phone" ? (
                     <div className="flex items-center gap-2">
                       <PhoneInput
@@ -411,7 +444,11 @@ export function AccountSheet({
                   ) : (
                     <ValueDisplay
                       field="phone"
-                      text={phoneE164 ? formatPhoneNumberIntl(phoneE164) || profile.phone : ""}
+                      text={
+                        phoneE164
+                          ? formatPhoneNumberIntl(phoneE164) || profile.phone
+                          : ""
+                      }
                     />
                   )}
                 </FieldRow>
@@ -419,7 +456,7 @@ export function AccountSheet({
                 <FieldRow label="NIC">
                   <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
                     <span
-                      className={`text-xs ${profile.nic ? "text-slate-800" : "italic text-slate-400"}`}
+                      className={`text-xs ${profile.nic ? "text-slate-800" : "text-slate-400 italic"}`}
                     >
                       {profile.nic || "Not added"}
                     </span>
@@ -454,14 +491,18 @@ export function AccountSheet({
 
             {/* Additional details */}
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <h3 className="border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <h3 className="border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
                 Additional details
               </h3>
               <div className="px-4">
                 {renderTextField("Address", "address", "Street, city")}
                 <FieldRow label="Joined">
                   <ValueDisplay
-                    text={profile.joinedDate ? format(new Date(profile.joinedDate), "PPP") : ""}
+                    text={
+                      profile.joinedDate
+                        ? format(new Date(profile.joinedDate), "PPP")
+                        : ""
+                    }
                   />
                 </FieldRow>
               </div>

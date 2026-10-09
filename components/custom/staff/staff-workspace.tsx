@@ -6,29 +6,86 @@ import { Search, X, Plus } from "lucide-react"
 
 import { StaffDateRangePicker } from "@/components/custom/staff/staff-date-range-picker"
 import { AddStaffSheet } from "@/components/custom/staff/add-staff-sheet"
+import type { MonthlyTargetStaff } from "@/components/custom/staff/monthly-target-dialog"
+import { MonthlyTargetDialog } from "@/components/custom/staff/monthly-target-dialog"
+import { ViewTargetDetails } from "@/components/custom/dashboard/viewTagetdetails"
 import { StaffTable } from "@/components/custom/staff/staff-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { TablePaginationFooter } from "@/components/custom/dashboard/table-pagination-footer"
 import { PageHeading } from "@/components/custom/dashboard/page-heading"
 import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
-import { createStaff, fetchStaff, updateStaffStatus, type CreateStaffInput, type StaffList } from "@/lib/staff"
+import { DownloadData } from "@/components/custom/dashboard/download/download"
+import { useCanPerform } from "@/components/custom/dashboard/current-user"
+import {
+  fetchCurrentMonthlyTargetStaffIds,
+  type MonthlyTargetSaveResult,
+} from "@/lib/monthly-targets"
+import {
+  createStaff,
+  fetchStaff,
+  updateStaffStatus,
+  type CreateStaffInput,
+  type StaffList,
+  type StaffRecord,
+} from "@/lib/staff"
 
 const staffQueryKey = ["staff"]
 const staffPageSize = 10
 type StatusFilter = "all" | "active" | "deactive"
 
+function getColomboCurrentPeriod() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Colombo",
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(new Date())
+  return {
+    month: Number(parts.find((part) => part.type === "month")?.value),
+    year: Number(parts.find((part) => part.type === "year")?.value),
+  }
+}
+
 export function StaffWorkspace() {
   const queryClient = useQueryClient()
+  const canManageMonthlyTargets = useCanPerform("manageMonthlyTargets")
+  const currentPeriod = getColomboCurrentPeriod()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [targetStaff, setTargetStaff] = useState<MonthlyTargetStaff | null>(
+    null
+  )
+  const [targetDialogMode, setTargetDialogMode] = useState<"add" | "view">(
+    "add"
+  )
   const [toastMessage, setToastMessage] = useState("")
+  const [toastTone, setToastTone] = useState<"success" | "warning">("success")
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [joinedFrom, setJoinedFrom] = useState("")
   const [joinedTo, setJoinedTo] = useState("")
   const [page, setPage] = useState(1)
   const staffQuery = useQuery({ queryKey: staffQueryKey, queryFn: fetchStaff })
+  const currentTargetsQuery = useQuery({
+    queryKey: [
+      "monthly-target",
+      "current-staff",
+      currentPeriod.year,
+      currentPeriod.month,
+    ],
+    queryFn: () =>
+      fetchCurrentMonthlyTargetStaffIds(
+        currentPeriod.month,
+        currentPeriod.year
+      ),
+    enabled: canManageMonthlyTargets,
+  })
   const createMutation = useMutation({
     mutationFn: (input: CreateStaffInput) => createStaff(input),
     onSuccess: async () => {
@@ -38,26 +95,36 @@ export function StaffWorkspace() {
     },
   })
   const statusMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => updateStaffStatus(id, isActive),
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      updateStaffStatus(id, isActive),
     onMutate: async ({ id, isActive }) => {
       await queryClient.cancelQueries({ queryKey: staffQueryKey })
       const previous = queryClient.getQueryData<StaffList>(staffQueryKey)
       if (previous) {
         queryClient.setQueryData<StaffList>(staffQueryKey, {
           ...previous,
-          staff: previous.staff.map((member) => member.id === id ? { ...member, isActive } : member),
+          staff: previous.staff.map((member) =>
+            member.id === id ? { ...member, isActive } : member
+          ),
         })
       }
       return { previous }
     },
     onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(staffQueryKey, context.previous)
+      if (context?.previous)
+        queryClient.setQueryData(staffQueryKey, context.previous)
     },
     onSuccess: (updatedStaff) => {
-      queryClient.setQueryData<StaffList>(staffQueryKey, (current) => current && ({
-        ...current,
-        staff: current.staff.map((member) => member.id === updatedStaff.id ? updatedStaff : member),
-      }))
+      queryClient.setQueryData<StaffList>(
+        staffQueryKey,
+        (current) =>
+          current && {
+            ...current,
+            staff: current.staff.map((member) =>
+              member.id === updatedStaff.id ? updatedStaff : member
+            ),
+          }
+      )
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: staffQueryKey }),
   })
@@ -76,23 +143,62 @@ export function StaffWorkspace() {
     await statusMutation.mutateAsync({ id, isActive })
   }
 
-  const staffData: StaffList = staffQuery.data ?? { staff: [], nextStaffId: "S0001" }
-  const queryError = staffQuery.error instanceof Error ? staffQuery.error.message : "Could not load staff."
+  function handleTargetSaved(result: MonthlyTargetSaveResult) {
+    const deliveryNotes = [
+      result.delivery.smsSent ? "SMS sent" : "SMS could not be sent",
+      result.delivery.smsLogged ? "SMS logged" : "SMS log could not be saved",
+      result.delivery.notificationsSent
+        ? "notifications sent"
+        : "notifications could not be sent",
+    ]
+    setToastTone(
+      result.delivery.smsSent &&
+        result.delivery.smsLogged &&
+        result.delivery.notificationsSent
+        ? "success"
+        : "warning"
+    )
+    setToastMessage(`Target saved. ${deliveryNotes.join("; ")}.`)
+  }
+
+  const staffData: StaffList = staffQuery.data ?? {
+    staff: [],
+    nextStaffId: "S0001",
+  }
+  const queryError =
+    staffQuery.error instanceof Error
+      ? staffQuery.error.message
+      : "Could not load staff."
   const filteredStaff = staffData.staff.filter((member) => {
     const searchValue = search.trim().toLowerCase()
-    const matchesSearch = !searchValue || [member.staffId, member.fullName, member.phone, member.nic ?? "", member.role ?? ""]
-      .some((value) => value.toLowerCase().includes(searchValue))
+    const matchesSearch =
+      !searchValue ||
+      [
+        member.staffId,
+        member.fullName,
+        member.phone,
+        member.nic ?? "",
+        member.role ?? "",
+      ].some((value) => value.toLowerCase().includes(searchValue))
     const isActive = member.isActive && !member.isDeleted
-    const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? isActive : !isActive)
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" ? isActive : !isActive)
     const joinedDate = new Date(member.createdAt)
     const fromDate = joinedFrom ? new Date(`${joinedFrom}T00:00:00`) : null
     const toDate = joinedTo ? new Date(`${joinedTo}T23:59:59.999`) : null
-    const matchesDateRange = (!fromDate || joinedDate >= fromDate) && (!toDate || joinedDate <= toDate)
+    const matchesDateRange =
+      (!fromDate || joinedDate >= fromDate) && (!toDate || joinedDate <= toDate)
 
     return matchesSearch && matchesStatus && matchesDateRange
   })
-  const visibleStaff = filteredStaff.slice((page - 1) * staffPageSize, page * staffPageSize)
-  const hasFilters = Boolean(search.trim() || statusFilter !== "all" || joinedFrom || joinedTo)
+  const visibleStaff = filteredStaff.slice(
+    (page - 1) * staffPageSize,
+    page * staffPageSize
+  )
+  const hasFilters = Boolean(
+    search.trim() || statusFilter !== "all" || joinedFrom || joinedTo
+  )
 
   function clearFilters() {
     setSearch("")
@@ -111,10 +217,13 @@ export function StaffWorkspace() {
       <section aria-label="Staff filters" className="space-y-2">
         <div className="flex flex-row items-center justify-between gap-2 sm:gap-3">
           <label className="relative block min-w-0 flex-1 sm:max-w-xs lg:max-w-sm">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
+              aria-hidden="true"
+            />
             <Input
               aria-label="Search staff"
-              className="h-9 rounded-md border-slate-200 bg-white pl-9 pr-10 text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
+              className="h-9 rounded-md border-slate-200 bg-white pr-10 pl-9 text-xs focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20"
               onChange={(event) => {
                 setSearch(event.target.value)
                 setPage(1)
@@ -153,26 +262,46 @@ export function StaffWorkspace() {
 
         <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-slate-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center justify-between gap-3 sm:order-1 sm:justify-start">
-            <p className="whitespace-nowrap text-xs tabular-nums text-slate-500" aria-live="polite">
-              {filteredStaff.length} {filteredStaff.length === 1 ? "staff member" : "staff members"}
+            <p
+              className="text-xs whitespace-nowrap text-slate-500 tabular-nums"
+              aria-live="polite"
+            >
+              {filteredStaff.length}{" "}
+              {filteredStaff.length === 1 ? "staff member" : "staff members"}
             </p>
             {hasFilters && (
-              <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs text-slate-600" onClick={clearFilters}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-xs text-slate-600"
+                onClick={clearFilters}
+              >
                 Clear filters
               </Button>
             )}
           </div>
-          <div className="flex flex-row gap-3 sm:order-2 sm:ml-auto sm:flex-row sm:items-center">
-             <Select
+          <div className="flex min-w-0 flex-row items-center gap-2 sm:order-2 sm:ml-auto sm:gap-3">
+            <Select
               value={statusFilter}
               onValueChange={(value: string | null) => {
                 setStatusFilter((value ?? "all") as StatusFilter)
                 setPage(1)
               }}
             >
-              <SelectTrigger id="staff-status-filter" aria-label="Filter staff by status" className="h-9 w-full text-xs sm:w-32">
+              <SelectTrigger
+                id="staff-status-filter"
+                aria-label="Filter staff by status"
+                className="h-9 w-full min-w-0 flex-1 text-xs sm:w-32 sm:flex-none"
+              >
                 <SelectValue>
-                  {(value) => value === "active" ? "Active" : value === "deactive" ? "Deactive" : "All status"}
+                  {(value) =>
+                    value === "active"
+                      ? "Active"
+                      : value === "deactive"
+                        ? "Deactive"
+                        : "All status"
+                  }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -181,17 +310,64 @@ export function StaffWorkspace() {
                 <SelectItem value="deactive">Deactive</SelectItem>
               </SelectContent>
             </Select>
-            <StaffDateRangePicker
-              from={joinedFrom}
-              to={joinedTo}
-              onFromChange={(value) => {
-                setJoinedFrom(value)
-                setPage(1)
-              }}
-              onToChange={(value) => {
-                setJoinedTo(value)
-                setPage(1)
-              }}
+            <div className="min-w-0 flex-1 sm:flex-none">
+              <StaffDateRangePicker
+                from={joinedFrom}
+                to={joinedTo}
+                onFromChange={(value) => {
+                  setJoinedFrom(value)
+                  setPage(1)
+                }}
+                onToChange={(value) => {
+                  setJoinedTo(value)
+                  setPage(1)
+                }}
+              />
+            </div>
+            <DownloadData
+              data={visibleStaff}
+              filename="staff"
+              label="Download staff"
+              itemLabel="staff"
+              sheetName="Staff"
+              columns={[
+                {
+                  header: "Staff ID",
+                  value: (member: StaffRecord) => member.staffId,
+                },
+                {
+                  header: "Name",
+                  value: (member: StaffRecord) => member.fullName,
+                },
+                {
+                  header: "Phone",
+                  value: (member: StaffRecord) => member.phone,
+                },
+                {
+                  header: "Role",
+                  value: (member: StaffRecord) => member.role ?? "",
+                },
+                {
+                  header: "NIC",
+                  value: (member: StaffRecord) => member.nic ?? "",
+                },
+                {
+                  header: "Status",
+                  value: (member: StaffRecord) =>
+                    member.isActive && !member.isDeleted
+                      ? "Active"
+                      : "Deactive",
+                },
+                {
+                  header: "Added",
+                  value: (member: StaffRecord) =>
+                    new Date(member.createdAt).toLocaleDateString("en-LK", {
+                      year: "numeric",
+                      month: "short",
+                      day: "2-digit",
+                    }),
+                },
+              ]}
             />
           </div>
         </div>
@@ -199,8 +375,17 @@ export function StaffWorkspace() {
 
       {staffQuery.isError && (
         <div className="flex items-center justify-between gap-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3">
-          <p className="text-sm text-rose-700" role="alert">{queryError}</p>
-          <Button type="button" variant="outline" size="sm" onClick={() => void staffQuery.refetch()}>Retry</Button>
+          <p className="text-sm text-rose-700" role="alert">
+            {queryError}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void staffQuery.refetch()}
+          >
+            Retry
+          </Button>
         </div>
       )}
 
@@ -209,13 +394,50 @@ export function StaffWorkspace() {
         isLoading={staffQuery.isPending}
         error={staffQuery.isError ? queryError : ""}
         hasFilters={hasFilters}
-        updatingStaffId={statusMutation.isPending ? statusMutation.variables?.id ?? null : null}
+        updatingStaffId={
+          statusMutation.isPending
+            ? (statusMutation.variables?.id ?? null)
+            : null
+        }
         onStatusChange={handleStatusChange}
+        currentTargetStaffIds={
+          new Set(currentTargetsQuery.data?.staffIds ?? [])
+        }
+        isCheckingTargets={
+          canManageMonthlyTargets &&
+          (currentTargetsQuery.isPending || currentTargetsQuery.isError)
+        }
+        onSetTarget={(member) => {
+          setTargetDialogMode("add")
+          setTargetStaff({
+            userId: member.userId,
+            fullName: member.fullName,
+            staffId: member.staffId,
+          })
+        }}
+        onViewTarget={(member) => {
+          setTargetDialogMode("view")
+          setTargetStaff({
+            userId: member.userId,
+            fullName: member.fullName,
+            staffId: member.staffId,
+          })
+        }}
       />
+
+      {canManageMonthlyTargets && currentTargetsQuery.isError && (
+        <p role="alert" className="text-xs text-rose-700">
+          {currentTargetsQuery.error instanceof Error
+            ? currentTargetsQuery.error.message
+            : "Could not check current monthly targets."}
+        </p>
+      )}
 
       {statusMutation.isError && (
         <p className="text-sm text-rose-700" role="alert">
-          {statusMutation.error instanceof Error ? statusMutation.error.message : "Could not update staff status."}
+          {statusMutation.error instanceof Error
+            ? statusMutation.error.message
+            : "Could not update staff status."}
         </p>
       )}
 
@@ -232,12 +454,43 @@ export function StaffWorkspace() {
         onOpenChange={setSheetOpen}
         nextStaffId={staffData.nextStaffId}
         isSubmitting={createMutation.isPending}
-        error={createMutation.error instanceof Error ? createMutation.error.message : ""}
+        error={
+          createMutation.error instanceof Error
+            ? createMutation.error.message
+            : ""
+        }
         onSubmit={handleCreate}
       />
 
+      <MonthlyTargetDialog
+        key={`${targetStaff?.userId ?? "none"}-add`}
+        staff={targetStaff}
+        open={Boolean(targetStaff) && targetDialogMode === "add"}
+        mode="add"
+        onSaved={handleTargetSaved}
+        onOpenChange={(open) => {
+          if (!open) setTargetStaff(null)
+        }}
+      />
+
+      <ViewTargetDetails
+        staff={targetStaff}
+        open={Boolean(targetStaff) && targetDialogMode === "view"}
+        onOpenChange={(open) => {
+          if (!open) setTargetStaff(null)
+        }}
+      />
+
       {toastMessage && (
-        <div role="status" aria-live="polite" className="fixed right-4 bottom-4 z-120 rounded-md border border-emerald-200 bg-white px-4 py-3 text-sm font-medium text-emerald-800 shadow-lg sm:right-8 sm:bottom-8">
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed right-4 bottom-4 z-120 rounded-md border bg-white px-4 py-3 text-sm font-medium shadow-lg sm:right-8 sm:bottom-8 ${
+            toastTone === "success"
+              ? "border-emerald-200 text-emerald-800"
+              : "border-amber-200 text-amber-800"
+          }`}
+        >
           {toastMessage}
         </div>
       )}
