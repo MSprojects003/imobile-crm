@@ -53,11 +53,14 @@ const statsCards = [
 ] as const
 
 export function StatsCards() {
-	const { data, isPending, isError, refetch } = useQuery({
+	const { data, isPending, isError, refetch, error } = useQuery({
 		queryKey: ["dashboard", "stats", "rolling-30-day-comparison"],
 		queryFn: fetchDashboardStats,
 		staleTime: 60_000,
 	})
+	const errorMessage = error instanceof Error
+		? error.message
+		: "Dashboard statistics could not be loaded."
 
 	return (
 		<section aria-label="Dashboard statistics">
@@ -168,7 +171,7 @@ export function StatsCards() {
 			</div>
 			{isError && (
 				<div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-rose-700" role="status">
-					<span>Dashboard totals could not be loaded from Supabase.</span>
+					<span>{errorMessage}</span>
 					<button
 						className="font-semibold underline underline-offset-4 hover:text-rose-900"
 						onClick={() => void refetch()}

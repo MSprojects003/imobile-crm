@@ -1,6 +1,7 @@
 "use client"
 
 import { supabase } from "@/lib/supabase"
+import { readDashboardApiResponse } from "@/lib/dashboard-api-response"
 
 export type SmsMonthlySummary = {
   fiscalYear: number
@@ -21,9 +22,8 @@ export async function fetchSmsMonthlySummary(): Promise<SmsMonthlySummary> {
     headers: { Authorization: `Bearer ${data.session.access_token}` },
     cache: "no-store",
   })
-  const result = await response.json() as SmsMonthlySummary & { error?: string }
-  if (!response.ok) {
-    throw new Error(result.error ?? "Could not load SMS counts.")
-  }
-  return result
+  return readDashboardApiResponse<SmsMonthlySummary>(
+    response,
+    "Could not load SMS counts.",
+  )
 }

@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase"
 import type { DashboardStats } from "@/lib/api/stat.card"
+import { readDashboardApiResponse } from "@/lib/dashboard-api-response"
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   const { data, error } = await supabase.auth.getSession()
@@ -13,9 +14,8 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     headers: { Authorization: `Bearer ${data.session.access_token}` },
     cache: "no-store",
   })
-  const result = await response.json() as DashboardStats & { error?: string }
-  if (!response.ok) {
-    throw new Error(result.error ?? "Could not load dashboard statistics.")
-  }
-  return result
+  return readDashboardApiResponse<DashboardStats>(
+    response,
+    "Could not load dashboard statistics.",
+  )
 }

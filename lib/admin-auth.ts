@@ -121,13 +121,28 @@ export async function authorizeDashboardRequest(
     }
   }
 
-  const authorization = await authorizeDashboardAction(request, adminClient, action)
-  if (!authorization.authorized) return authorization
-  return {
-    authorized: true as const,
-    adminClient,
-    role: authorization.role,
-    notificationUserId: authorization.notificationUserId,
+  try {
+    const authorization = await authorizeDashboardAction(request, adminClient, action)
+    if (!authorization.authorized) return authorization
+    return {
+      authorized: true as const,
+      adminClient,
+      role: authorization.role,
+      notificationUserId: authorization.notificationUserId,
+    }
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error
+      ? error.code
+      : undefined
+    const message = error instanceof Error ? error.message : "Unknown authorization error"
+    console.error("Dashboard request authorization failed", { code, message })
+    return {
+      authorized: false as const,
+      response: NextResponse.json(
+        { error: "Could not verify dashboard access." },
+        { status: 500 },
+      ),
+    }
   }
 }
 
