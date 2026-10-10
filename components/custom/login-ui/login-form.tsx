@@ -50,11 +50,14 @@ export function LoginForm({ onForgotPassword, onLogin }: LoginFormProps) {
               <UserRound className="pointer-events-none absolute left-4 top-1/2 size-[19px] -translate-y-1/2 text-[#737b85]" strokeWidth={1.8} />
               <Input
                 aria-label="Username"
+                autoCapitalize="none"
                 autoComplete="username"
+                autoCorrect="off"
                 className="h-[52px] rounded-[8px] border-[#dfe2e6] bg-white pl-11 text-sm font-medium shadow-[0_3px_10px_rgba(16,24,40,0.04)] placeholder:text-[#a3a8af] focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20 sm:h-[54px]"
                 name="username"
                 placeholder="Enter your username"
                 required
+                spellCheck={false}
               />
             </span>
           </label>
@@ -65,11 +68,13 @@ export function LoginForm({ onForgotPassword, onLogin }: LoginFormProps) {
               <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 size-[19px] -translate-y-1/2 text-[#737b85]" strokeWidth={1.8} />
               <Input
                 aria-label="Password"
+                autoCapitalize="none"
                 autoComplete="current-password"
                 className="h-[52px] rounded-[8px] border-[#dfe2e6] bg-white px-11 text-sm font-medium shadow-[0_3px_10px_rgba(16,24,40,0.04)] placeholder:text-[#a3a8af] focus-visible:border-[#ed1c2e] focus-visible:ring-[#ed1c2e]/20 sm:h-[54px]"
                 name="password"
                 placeholder="Enter your password"
                 required
+                spellCheck={false}
                 type={showPassword ? "text" : "password"}
               />
               <button
