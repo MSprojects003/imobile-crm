@@ -123,11 +123,11 @@ function FieldShell({
       </span>
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+          <span className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">
             {label}
           </span>
           {saving && (
-            <span className="flex items-center gap-1 text-xs text-slate-500">
+            <span className="flex items-center gap-1 text-[11px] text-slate-500">
               <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
               Saving
             </span>
@@ -182,14 +182,14 @@ function EditableDetail({
       {multiline ? (
         <Textarea
           {...controlProps}
-          className="min-h-16 resize-y border-slate-200 bg-white text-xs font-medium text-slate-900 shadow-none"
+          className="min-h-14 resize-y border-slate-200 bg-white text-[10px] font-medium text-slate-900 placeholder:text-[10px] shadow-none"
         />
       ) : (
         <Input
           {...controlProps}
           type={type}
           max={max}
-          className="h-9 border-slate-200 bg-white text-xs font-medium text-slate-900 shadow-none"
+          className="h-8 border-slate-200 bg-white text-[10px] font-medium text-slate-900 placeholder:text-[10px] shadow-none"
         />
       )}
       {footer}
@@ -221,7 +221,7 @@ function PhoneDetail({
         disabled={disabled}
         placeholder="Add your phone number"
         onChange={(phone) => onChange(phone ?? "")}
-        className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-900 [&_.PhoneInputCountry]:mr-0 [&_.PhoneInputCountrySelect]:h-7 [&_.PhoneInputCountrySelect]:rounded-none [&_.PhoneInputCountrySelect]:border-0 [&_.PhoneInputInput]:h-7 [&_.PhoneInputInput]:min-w-0 [&_.PhoneInputInput]:flex-1 [&_.PhoneInputInput]:border-0 [&_.PhoneInputInput]:bg-transparent [&_.PhoneInputInput]:text-xs [&_.PhoneInputInput]:outline-none"
+        className="flex h-8 min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-900 [&_.PhoneInputCountry]:mr-0 [&_.PhoneInputCountrySelect]:h-6 [&_.PhoneInputCountrySelect]:rounded-none [&_.PhoneInputCountrySelect]:border-0 [&_.PhoneInputInput]:h-6 [&_.PhoneInputInput]:min-w-0 [&_.PhoneInputInput]:flex-1 [&_.PhoneInputInput]:border-0 [&_.PhoneInputInput]:bg-transparent [&_.PhoneInputInput]:text-[11px] [&_.PhoneInputInput]:outline-none"
       />
     </FieldShell>
   )
@@ -792,7 +792,7 @@ export function ProfileSheet({
                   <Skeleton className="size-9 rounded-lg" />
                   <div className="flex-1 space-y-2">
                     <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-8 w-full" />
                   </div>
                 </div>
               ))}

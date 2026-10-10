@@ -13,13 +13,13 @@ export async function GET(request: NextRequest) {
   const [staffResult, shopsResult] = await Promise.all([
     authorization.adminClient
       .from("staff")
-      .select("id, staff_id, user_id, is_active, is_deleted, user:users!staff_user_id_fkey(full_name, phone)")
+      .select("id, staff_id, user_id, area, is_active, is_deleted, user:users!staff_user_id_fkey(full_name, phone)")
       .eq("is_deleted", false)
       .eq("is_active", true)
       .order("staff_id", { ascending: true }),
     authorization.adminClient
       .from("shops")
-      .select("id, name")
+      .select("id, name, area")
       .eq("is_deleted", false)
       .eq("is_active", true)
       .order("name", { ascending: true }),
@@ -37,10 +37,21 @@ export async function GET(request: NextRequest) {
   const staff = (staffResult.data ?? []).flatMap((member) => {
     const user = Array.isArray(member.user) ? member.user[0] : member.user
     if (!user?.full_name || !member.user_id) return []
-    return [{ id: member.id, staffId: member.staff_id, fullName: user.full_name }]
+    return [{
+      id: member.id,
+      staffId: member.staff_id,
+      fullName: user.full_name,
+      area: member.area,
+    }]
   })
 
-  return NextResponse.json({ staff, shops: shopsResult.data ?? [] })
+  const shops = (shopsResult.data ?? []).map((shop) => ({
+    id: shop.id,
+    name: shop.name,
+    area: shop.area,
+  }))
+
+  return NextResponse.json({ staff, shops })
 }
 
 export async function POST(request: NextRequest) {

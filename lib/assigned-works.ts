@@ -6,11 +6,13 @@ export type AssignmentStaffOption = {
   id: string
   staffId: string
   fullName: string
+  area: string | null
 }
 
 export type AssignmentShopOption = {
   id: string
   name: string
+  area: string | null
 }
 
 export type AssignmentOptions = {

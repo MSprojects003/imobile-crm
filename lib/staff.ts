@@ -8,6 +8,7 @@ export type StaffRecord = {
   phone: string
   nic: string | null
   address: string | null
+  area: string | null
   role: string | null
   isActive: boolean
   isDeleted: boolean
@@ -24,6 +25,7 @@ export type CreateStaffInput = {
   phone: string
   nic: string
   address: string
+  area: string
   role: string
   accountType: "staff" | "sub_admin"
   username?: string

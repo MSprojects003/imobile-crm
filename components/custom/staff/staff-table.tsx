@@ -404,7 +404,7 @@ export function StaffTable({
                         {member.phone || "No phone number"}
                       </p>
                     </div>
-                    {(member.role || member.address || member.nic) && (
+                    {(member.role || member.address || member.area || member.nic) && (
                       <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-500">
                         {member.address ? (
                           <MapPin
@@ -418,6 +418,7 @@ export function StaffTable({
                           {[
                             member.role,
                             member.address,
+                            member.area,
                             member.nic ? `NIC ${member.nic}` : "",
                           ]
                             .filter(Boolean)

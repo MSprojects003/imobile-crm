@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react"
 import PhoneInput from "react-phone-number-input"
 import "react-phone-number-input/style.css"
 
+import { Eye, EyeOff } from "lucide-react"
+import { AreaSelect } from "@/components/custom/area-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,7 +16,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Eye, EyeOff } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { CreateStaffInput } from "@/lib/staff"
 
@@ -39,18 +40,21 @@ export function AddStaffSheet({
   const [phone, setPhone] = useState<string>()
   const [nic, setNic] = useState("")
   const [address, setAddress] = useState("")
+  const [area, setArea] = useState("")
+  const [areaError, setAreaError] = useState("")
   const [role, setRole] = useState("")
   const [accountType, setAccountType] = useState<StaffAccountType>("staff")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-
   useEffect(() => {
     if (!open) return
     setFullName("")
     setPhone(undefined)
     setNic("")
     setAddress("")
+    setArea("")
+    setAreaError("")
     setRole("")
     setAccountType("staff")
     setUsername("")
@@ -61,9 +65,14 @@ export function AddStaffSheet({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!phone) return
+    if (!area) {
+      setAreaError("Select an area.")
+      return
+    }
+    setAreaError("")
     const customUsername = accountType === "sub_admin" && username ? username : undefined
     const customPassword = accountType === "sub_admin" && password ? password : undefined
-    await onSubmit({ fullName, phone, nic, address, role, accountType, username: customUsername, password: customPassword })
+    await onSubmit({ fullName, phone, nic, address, area, role, accountType, username: customUsername, password: customPassword })
   }
 
   return (
@@ -186,6 +195,28 @@ export function AddStaffSheet({
                   value={address}
                   className="w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#ed1c2e]/30"
                 />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <label htmlFor="staff-area" className="text-xs font-medium text-slate-800">
+                  Area <span className="text-rose-600">*</span>
+                </label>
+                <AreaSelect
+                  id="staff-area"
+                  ariaLabel="Area"
+                  value={area}
+                  onValueChange={(value) => {
+                    setArea(value)
+                    setAreaError("")
+                  }}
+                  required
+                  invalid={Boolean(areaError)}
+                />
+                {areaError && (
+                  <p id="staff-area-error" className="text-xs text-rose-600" role="alert">
+                    {areaError}
+                  </p>
+                )}
               </div>
             </div>
 

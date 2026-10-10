@@ -31,6 +31,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { supabase } from "@/lib/supabase"
 
@@ -70,6 +71,14 @@ function SessionPageSkeleton({ pathname }: { pathname: string }) {
       <Skeleton className="h-32 w-full rounded-md" />
     </div>
   )
+}
+
+function DashboardSidebarTrigger() {
+  const { isMobile, state } = useSidebar()
+
+  if (!isMobile && state !== "expanded") return null
+
+  return <SidebarTrigger aria-label="Toggle navigation" />
 }
 
 export function DashboardShell({ children }: { children: ReactNode }) {
@@ -120,11 +129,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <SidebarInset className="h-svh min-h-0 overflow-hidden">
           <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
             <div className="flex min-w-0 items-center gap-2 md:gap-3">
-              <SidebarTrigger aria-label="Toggle navigation" />
+              <DashboardSidebarTrigger />
               <Link
                 href="/dashboard"
                 aria-label="iMobile dashboard"
-                className="shrink-0"
+                className="shrink-0 md:hidden"
               >
                 <Image
                   src="/imobile.webp"
@@ -132,10 +141,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   width={130}
                   height={42}
                   priority
-                  className="h-auto w-[96px] object-contain sm:w-[110px]"
+                  className="h-auto w-[clamp(100px,32vw,120px)] object-contain sm:w-[120px]"
                 />
               </Link>
-              <div className="hidden h-5 w-px bg-border md:block" />
               <Breadcrumb className="hidden md:block">
                 <BreadcrumbList>
                   {currentPage === "Dashboard" ? (

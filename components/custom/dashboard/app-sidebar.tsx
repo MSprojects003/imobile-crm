@@ -41,6 +41,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarSeparator,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
 import { supabase } from "@/lib/supabase"
@@ -68,7 +69,7 @@ type SidebarProfile = {
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { isMobile, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, openMobile, setOpenMobile, state } = useSidebar()
   const isProductsSection = ["/dashboard/products", "/dashboard/categories", "/dashboard/brands"].includes(pathname)
   const [expandedGroups, setExpandedGroups] = useState<string[]>(isProductsSection ? ["products"] : [])
   const [profile, setProfile] = useState<SidebarProfile | null>(null)
@@ -162,20 +163,28 @@ export function AppSidebar() {
   return (
     <>
     <Sidebar collapsible="icon" variant="sidebar">
-      <SidebarHeader className="h-16 justify-center px-5">
-        <Link href="/dashboard" onClick={closeMobileSidebar} className="flex h-full items-center overflow-hidden">
+      <SidebarHeader className="h-16 flex-row items-center justify-between gap-2 px-3">
+        <Link
+          href="/dashboard"
+          onClick={closeMobileSidebar}
+          aria-label="iMobile dashboard"
+          className="flex h-full min-w-0 flex-1 items-center overflow-hidden group-data-[collapsible=icon]:hidden"
+        >
           <Image
             src="/imobile.webp"
             alt="iMobile Supreme"
             width={170}
             height={54}
             priority
-            className="h-auto max-h-12 w-[156px] object-contain object-left group-data-[collapsible=icon]:hidden"
+            className="h-auto max-h-12 w-full max-w-[156px] object-contain object-left"
           />
-          <span className="hidden size-9 shrink-0 items-center justify-center rounded-md bg-[#ed1c2e] text-lg font-bold text-white group-data-[collapsible=icon]:flex">
-            i
-          </span>
         </Link>
+        <SidebarTrigger
+          aria-label="Toggle navigation"
+          className={
+            !isMobile && state === "collapsed" ? "shrink-0" : "hidden"
+          }
+        />
       </SidebarHeader>
       <SidebarSeparator className="mx-4 ml-0 mt-0" />
       <SidebarContent>

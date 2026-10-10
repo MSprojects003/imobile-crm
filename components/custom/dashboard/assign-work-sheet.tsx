@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ClipboardList, UserPlus } from "lucide-react"
+import { ChevronDown, ClipboardList, UserPlus } from "lucide-react"
 
+import { AreaSelect } from "@/components/custom/area-select"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/assigned-works"
 import { RestrictedAction } from "@/components/custom/dashboard/restricted-action"
 import { VoiceText } from "@/components/custom/dashboard/Voice-text"
+import { sriLankaAreas } from "@/lib/api/arealist"
 
 const workDetails = [
   "Shop visit",
@@ -36,13 +38,21 @@ const workDetails = [
   "Other",
 ]
 
+function normalizeArea(area: string | null | undefined) {
+  return area?.trim().toLocaleLowerCase() ?? ""
+}
+
 export function AssignWorkSheet() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [staffId, setStaffId] = useState("")
+  const [staffArea, setStaffArea] = useState("")
+  const [showStaffAreaFilter, setShowStaffAreaFilter] = useState(false)
   const [work, setWork] = useState("")
   const [customWork, setCustomWork] = useState("")
   const [shopId, setShopId] = useState("")
+  const [shopArea, setShopArea] = useState("")
+  const [showShopAreaFilter, setShowShopAreaFilter] = useState(false)
   const [formError, setFormError] = useState("")
   const [toastMessage, setToastMessage] = useState("")
   const optionsQuery = useQuery({
@@ -65,9 +75,13 @@ export function AssignWorkSheet() {
           : `Work assigned and staff notified, but SMS could not be sent${result.smsDelivery.error ? `: ${result.smsDelivery.error}` : ""}${result.smsDelivery.logged ? "" : " or logged"}.`
       )
       setStaffId("")
+      setStaffArea("")
+      setShowStaffAreaFilter(false)
       setWork("")
       setCustomWork("")
       setShopId("")
+      setShopArea("")
+      setShowShopAreaFilter(false)
     },
   })
 
@@ -100,6 +114,26 @@ export function AssignWorkSheet() {
   }
 
   const isLoadingOptions = optionsQuery.isPending
+  const staffOptions = optionsQuery.data?.staff ?? []
+  const shopOptions = optionsQuery.data?.shops ?? []
+  const filteredStaff = useMemo(
+    () =>
+      staffArea
+        ? staffOptions.filter(
+            (member) => normalizeArea(member.area) === normalizeArea(staffArea)
+          )
+        : staffOptions,
+    [staffArea, staffOptions]
+  )
+  const filteredShops = useMemo(
+    () =>
+      shopArea
+        ? shopOptions.filter(
+            (shop) => normalizeArea(shop.area) === normalizeArea(shopArea)
+          )
+        : shopOptions,
+    [shopArea, shopOptions]
+  )
 
   return (
     <>
@@ -177,34 +211,100 @@ export function AssignWorkSheet() {
                 >
                   Staff
                 </label>
-                {isLoadingOptions ? (
-                  <Skeleton className="h-9 w-full" />
-                ) : (
-                  <Select
-                    value={staffId || null}
-                    onValueChange={(value: string | null) => {
-                      setStaffId(value ?? "")
-                      setFormError("")
-                    }}
-                  >
-                    <SelectTrigger
-                      id="assign-rep"
-                      className="h-9 w-full min-w-0 text-xs"
+                <div className="flex items-center gap-2">
+                  {isLoadingOptions ? (
+                    <Skeleton className="h-9 flex-1" />
+                  ) : (
+                    <Select
+                      value={staffId || null}
+                      onValueChange={(value: string | null) => {
+                        setStaffId(value ?? "")
+                        setFormError("")
+                      }}
                     >
-                      <SelectValue placeholder="Select staff" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(optionsQuery.data?.staff ?? []).map((member) => (
-                        <SelectItem
-                          key={member.id}
-                          value={member.id}
-                          className="text-xs"
-                        >
-                          {member.fullName} ({member.staffId})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        id="assign-rep"
+                        className="h-9 w-full min-w-0 flex-1 text-xs"
+                      >
+                        <SelectValue placeholder="Select staff" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredStaff.length ? (
+                          filteredStaff.map((member) => (
+                            <SelectItem
+                              key={member.id}
+                              value={member.id}
+                              className="text-xs"
+                            >
+                              {member.fullName} ({member.staffId})
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem
+                            value="__no_staff__"
+                            disabled
+                            className="text-xs text-slate-400"
+                          >
+                            No staff
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={
+                      showStaffAreaFilter
+                        ? "Hide staff area filter"
+                        : staffArea
+                          ? `Show staff area filter, currently ${staffArea}`
+                          : "Show staff area filter"
+                    }
+                    aria-expanded={showStaffAreaFilter}
+                    aria-controls="assign-area-filter"
+                    className="size-9 shrink-0 px-0"
+                    onClick={() =>
+                      setShowStaffAreaFilter((isVisible) => !isVisible)
+                    }
+                  >
+                    <ChevronDown
+                      className={`size-4 transition-transform ${
+                        showStaffAreaFilter ? "rotate-180" : ""
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </Button>
+                </div>
+                {showStaffAreaFilter && (
+                  <div id="assign-area-filter" className="pt-1">
+                    <AreaSelect
+                      id="assign-area"
+                      ariaLabel="Filter staff by area"
+                      searchLabel="areas"
+                      placeholder="All areas"
+                      areas={sriLankaAreas}
+                      allowClear
+                      clearLabel="All areas"
+                      value={staffArea}
+                      onValueChange={(nextArea) => {
+                        setStaffArea(nextArea)
+                        if (
+                          staffId &&
+                          !staffOptions.some(
+                            (member) =>
+                              member.id === staffId &&
+                              (!nextArea ||
+                                normalizeArea(member.area) ===
+                                  normalizeArea(nextArea))
+                          )
+                        ) {
+                          setStaffId("")
+                        }
+                        setFormError("")
+                      }}
+                    />
+                  </div>
                 )}
               </div>
 
@@ -276,34 +376,100 @@ export function AssignWorkSheet() {
                 >
                   Shop
                 </label>
-                {isLoadingOptions ? (
-                  <Skeleton className="h-9 w-full" />
-                ) : (
-                  <Select
-                    value={shopId || null}
-                    onValueChange={(value: string | null) => {
-                      setShopId(value ?? "")
-                      setFormError("")
-                    }}
-                  >
-                    <SelectTrigger
-                      id="assign-shop"
-                      className="h-9 w-full min-w-0 text-xs"
+                <div className="flex items-center gap-2">
+                  {isLoadingOptions ? (
+                    <Skeleton className="h-9 flex-1" />
+                  ) : (
+                    <Select
+                      value={shopId || null}
+                      onValueChange={(value: string | null) => {
+                        setShopId(value ?? "")
+                        setFormError("")
+                      }}
                     >
-                      <SelectValue placeholder="Select a shop" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(optionsQuery.data?.shops ?? []).map((shop) => (
-                        <SelectItem
-                          key={shop.id}
-                          value={shop.id}
-                          className="text-xs"
-                        >
-                          {shop.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger
+                        id="assign-shop"
+                        className="h-9 w-full min-w-0 flex-1 text-xs"
+                      >
+                        <SelectValue placeholder="Select a shop" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredShops.length ? (
+                          filteredShops.map((shop) => (
+                            <SelectItem
+                              key={shop.id}
+                              value={shop.id}
+                              className="text-xs"
+                            >
+                              {shop.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem
+                            value="__no_shops__"
+                            disabled
+                            className="text-xs text-slate-400"
+                          >
+                            No shops
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={
+                      showShopAreaFilter
+                        ? "Hide shop area filter"
+                        : shopArea
+                          ? `Show shop area filter, currently ${shopArea}`
+                          : "Show shop area filter"
+                    }
+                    aria-expanded={showShopAreaFilter}
+                    aria-controls="assign-shop-area-filter"
+                    className="size-9 shrink-0 px-0"
+                    onClick={() =>
+                      setShowShopAreaFilter((isVisible) => !isVisible)
+                    }
+                  >
+                    <ChevronDown
+                      className={`size-4 transition-transform ${
+                        showShopAreaFilter ? "rotate-180" : ""
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </Button>
+                </div>
+                {showShopAreaFilter && (
+                  <div id="assign-shop-area-filter" className="pt-1">
+                    <AreaSelect
+                      id="assign-shop-area"
+                      ariaLabel="Filter shops by area"
+                      searchLabel="areas"
+                      placeholder="All areas"
+                      areas={sriLankaAreas}
+                      allowClear
+                      clearLabel="All areas"
+                      value={shopArea}
+                      onValueChange={(nextArea) => {
+                        setShopArea(nextArea)
+                        if (
+                          shopId &&
+                          !shopOptions.some(
+                            (shop) =>
+                              shop.id === shopId &&
+                              (!nextArea ||
+                                normalizeArea(shop.area) ===
+                                  normalizeArea(nextArea))
+                          )
+                        ) {
+                          setShopId("")
+                        }
+                        setFormError("")
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             </div>

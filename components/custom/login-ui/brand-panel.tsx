@@ -73,6 +73,14 @@ export function BrandPanel() {
           <div className="relative z-10 mb-1 h-20 w-14 -skew-x-6 rounded-[9px] border-2 border-white/60 bg-gradient-to-b from-white/20 to-white/5 shadow-[0_14px_30px_rgba(125,0,12,0.3)] sm:h-24 sm:w-16" />
         </div>
       </div>
+      <footer className="relative z-10 px-6 pb-5 text-center text-xs text-white/75 sm:text-sm">
+        <a
+          className="underline-offset-4 transition-colors hover:text-white hover:underline"
+          href="https://www.amsolution.tech"
+        >
+          Powered by AM Solutions (Pvt) ltd
+        </a>
+      </footer>
     </section>
   )
 }

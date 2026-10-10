@@ -2,6 +2,7 @@ import "server-only"
 
 import { NextRequest, NextResponse } from "next/server"
 import { authorizeDashboardRequest, createAdminClient } from "@/lib/admin-auth"
+import { sriLankaAreas } from "@/lib/api/arealist"
 
 type StaffRow = {
   id: string
@@ -9,6 +10,7 @@ type StaffRow = {
   user_id: string | null
   nic: string | null
   address: string | null
+  area: string | null
   role: string | null
   is_deleted: boolean
   is_active: boolean
@@ -99,6 +101,7 @@ function serializeStaff(row: StaffRow) {
     phone: row.user?.phone ?? "",
     nic: row.nic,
     address: row.address,
+    area: row.area,
     role: row.role,
     isActive: row.is_active,
     isDeleted: row.is_deleted,
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await authorization.adminClient
     .from("staff")
     .select(
-      "id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)"
+      "id, staff_id, user_id, nic, address, area, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)"
     )
     .eq("is_deleted", false)
     .order("created_at", { ascending: false })
@@ -182,7 +185,7 @@ export async function PATCH(request: NextRequest) {
     .eq("id", id)
     .eq("is_deleted", false)
     .select(
-      "id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)"
+      "id, staff_id, user_id, nic, address, area, role, is_deleted, is_active, created_at, user:users!staff_user_id_fkey(full_name, phone)"
     )
     .maybeSingle()
 
@@ -230,6 +233,13 @@ export async function POST(request: NextRequest) {
   const phone = typeof input.phone === "string" ? input.phone.trim() : ""
   const nic = typeof input.nic === "string" ? input.nic.trim() : ""
   const address = typeof input.address === "string" ? input.address.trim() : ""
+  if (typeof input.area !== "string" || !input.area.trim()) {
+    return NextResponse.json(
+      { error: "Select an area." },
+      { status: 400 }
+    )
+  }
+  const area = input.area.trim()
   const role = typeof input.role === "string" ? input.role.trim() : ""
   const accountType = input.accountType
 
@@ -255,6 +265,12 @@ export async function POST(request: NextRequest) {
       { error: "Address must be 500 characters or fewer." },
       { status: 400 }
     )
+  if (!sriLankaAreas.some((knownArea) => knownArea === area)) {
+    return NextResponse.json(
+      { error: "Choose an area from the provided list." },
+      { status: 400 }
+    )
+  }
   if (!role || role.length > 80)
     return NextResponse.json(
       { error: "Enter a staff role up to 80 characters." },
@@ -368,10 +384,11 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           nic: nic || null,
           address: address || null,
+          area: area || null,
           role,
         })
         .select(
-          "id, staff_id, user_id, nic, address, role, is_deleted, is_active, created_at"
+          "id, staff_id, user_id, nic, address, area, role, is_deleted, is_active, created_at"
         )
         .single()
 
